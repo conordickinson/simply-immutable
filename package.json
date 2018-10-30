@@ -1,6 +1,6 @@
 {
   "name": "simply-immutable",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Fast and type safe immutable utilities for working with simple POJOs",
   "main": "dist/Utils",
   "scripts": {

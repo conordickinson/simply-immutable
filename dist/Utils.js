@@ -18,11 +18,8 @@ function cmpAndSet(dst, src) {
     const dstType = getType(dst);
     const srcType = getType(src);
     if (dstType !== srcType) {
-        if (srcType === 'array') {
-            return Object.freeze(src.slice(0));
-        }
-        else if (srcType === 'object') {
-            return Object.freeze(Object.assign({}, src));
+        if (srcType === 'array' || srcType === 'object') {
+            return cloneImmutable(src);
         }
         else {
             return src;
@@ -43,7 +40,7 @@ function cmpAndSet(dst, src) {
             }
         }
         if (out !== dst) {
-            out = Object.freeze(out);
+            Object.freeze(out);
         }
         return out;
     }
@@ -68,7 +65,7 @@ function cmpAndSet(dst, src) {
             delete out[key];
         }
         if (out !== dst) {
-            out = Object.freeze(out);
+            Object.freeze(out);
         }
         return out;
     }
@@ -120,7 +117,7 @@ function modifyImmutableRecur(root, path, value) {
         }
     }
     if (root !== oldRoot) {
-        root = Object.freeze(root);
+        Object.freeze(root);
     }
     return root;
 }
