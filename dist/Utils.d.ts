@@ -12,4 +12,5 @@ export declare function modifyImmutable<T, V, A, B, C>(root: T, pathFunc: (root:
 export declare function cloneImmutable<T>(root: T): T;
 export declare function filterImmutable<T>(obj: StashOf<T>, filter: (o: T) => boolean): StashOf<T>;
 export declare function filterImmutable<T>(arr: T[], filter: (o: T) => boolean): T[];
+export declare function makeImmutable<T>(o: T): T;
 export {};

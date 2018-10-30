@@ -172,3 +172,20 @@ function filterImmutable(val, filter) {
     }
 }
 exports.filterImmutable = filterImmutable;
+function makeImmutable(o) {
+    const type = getType(o);
+    if (type === 'object') {
+        for (const key in o) {
+            makeImmutable(o[key]);
+        }
+        Object.freeze(o);
+    }
+    else if (type === 'array') {
+        for (let i = 0; i < o.length; ++i) {
+            makeImmutable(o[i]);
+        }
+        Object.freeze(o);
+    }
+    return o;
+}
+exports.makeImmutable = makeImmutable;

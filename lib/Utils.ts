@@ -26,10 +26,8 @@ function cmpAndSet(dst: any, src: any) {
   const dstType = getType(dst);
   const srcType = getType(src);
   if (dstType !== srcType) {
-    if (srcType === 'array') {
-      return Object.freeze(src.slice(0));
-    } else if (srcType === 'object') {
-      return Object.freeze(Object.assign({}, src));
+    if (srcType === 'array' || srcType === 'object') {
+      return cloneImmutable(src);
     } else {
       return src;
     }
@@ -50,7 +48,7 @@ function cmpAndSet(dst: any, src: any) {
       }
     }
     if (out !== dst) {
-      out = Object.freeze(out);
+      Object.freeze(out);
     }
     return out;
   }
@@ -76,7 +74,7 @@ function cmpAndSet(dst: any, src: any) {
       delete out[key];
     }
     if (out !== dst) {
-      out = Object.freeze(out);
+      Object.freeze(out);
     }
     return out;
   }
@@ -130,7 +128,7 @@ function modifyImmutableRecur<T>(root: T, path: Array<string|number>, value: any
   }
 
   if (root !== oldRoot) {
-    root = Object.freeze(root);
+    Object.freeze(root);
   }
   return root;
 }
@@ -187,4 +185,20 @@ export function filterImmutable<T>(val: StashOf<T> | T[], filter: (o: T) => bool
     }
     return Object.freeze(out);
   }
+}
+
+export function makeImmutable<T>(o: T): T {
+  const type = getType(o);
+  if (type === 'object') {
+    for (const key in o) {
+      makeImmutable(o[key]);
+    }
+    Object.freeze(o);
+  } else if (type === 'array') {
+    for (let i = 0; i < (o as any).length; ++i) {
+      makeImmutable(o[i]);
+    }
+    Object.freeze(o);
+  }
+  return o;
 }
