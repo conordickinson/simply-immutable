@@ -1,4 +1,4 @@
-import { makeImmutable, modifyImmutable, REMOVE } from '../lib/Utils';
+import { cloneImmutable, filterImmutable, makeImmutable, modifyImmutable, REMOVE } from '../lib/Utils';
 
 import * as chai from 'chai';
 
@@ -42,19 +42,74 @@ function isImmutableRecursive(o) {
 
 describe('Utils', () => {
   describe('makeImmutable', () => {
-    it('should make objects immutable');
-    it('should make arrays immutable');
-    it('should work recursively');
+    it('should make objects immutable', () => {
+      const obj = { a: 1, b: 2, c: 'hello' };
+      expect(isImmutableRecursive(obj)).to.equal(false);
+      makeImmutable(obj);
+      expect(isImmutableRecursive(obj)).to.equal(true);
+    });
+
+    it('should make arrays immutable', () => {
+      const arr = [ 1, 2, 'hello' ];
+      expect(isImmutableRecursive(arr)).to.equal(false);
+      makeImmutable(arr);
+      expect(isImmutableRecursive(arr)).to.equal(true);
+    });
+
+    it('should work recursively', () => {
+      const obj = { a: 1, b: 2, c: [ 1, 2, 3 ], d: { foo: { bar: [ 1, 2, 3] } } };
+      expect(isImmutableRecursive(obj)).to.equal(false);
+      makeImmutable(obj);
+      expect(isImmutableRecursive(obj)).to.equal(true);
+      expect(isImmutable(obj.d.foo.bar)).to.equal(true);
+    });
   });
 
   describe('cloneImmutable', () => {
-    it('should deep clone objects and make them recursively immutable');
-    it('should deep clone arrays and make them recursively immutable');
+    it('should deep clone objects and make them recursively immutable', () => {
+      const obj = { a: { foo: 'bar' }, b: { foo: { baz: { boz: 17 } } } };
+      const newObj = cloneImmutable(obj);
+      expect(newObj).to.deep.equal(obj);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj.a).to.not.equal(obj.a);
+      expect(newObj.b).to.not.equal(obj.b);
+      expect(newObj.b.foo).to.not.equal(obj.b.foo);
+      expect(isImmutableRecursive(newObj)).to.equal(true);
+      expect(isImmutableRecursive(obj)).to.equal(false);
+    });
+
+    it('should deep clone arrays and make them recursively immutable', () => {
+      const arr = [ 1, [ 2, 3, [4, 5, 6] ] ];
+      const newArr = cloneImmutable(arr);
+      expect(newArr).to.deep.equal(arr);
+      expect(newArr).to.not.equal(arr);
+      expect(newArr[1]).to.not.equal(arr[1]);
+      expect(newArr[1][2]).to.not.equal(arr[1][2]);
+      expect(isImmutableRecursive(newArr)).to.equal(true);
+      expect(isImmutableRecursive(arr)).to.equal(false);
+    });
   });
 
   describe('filterImmutable', () => {
-    it('should filter objects');
-    it('should filter arrays');
+    it('should filter objects', () => {
+      const obj = makeImmutable({ a: 1, b: { foo: 2 }, c: 2, d: 3, e: { bar: 4 } });
+      const newObj = filterImmutable(obj, v => typeof v === 'object');
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ b: { foo: 2 }, e: { bar: 4 } });
+      expect(newObj.b).to.equal(obj.b);
+      expect(newObj.e).to.equal(obj.e);
+      expect(isImmutableRecursive(newObj)).to.equal(true);
+    });
+
+    it('should filter arrays', () => {
+      const arr = makeImmutable([1, { foo: 2 }, 2, 3, { bar: 4 }]);
+      const newArr = filterImmutable(arr, v => typeof v === 'object');
+      expect(newArr).to.not.equal(arr);
+      expect(newArr).to.deep.equal([ { foo: 2 }, { bar: 4 } ]);
+      expect(newArr[0]).to.equal(arr[1]);
+      expect(newArr[1]).to.equal(arr[4]);
+      expect(isImmutableRecursive(newArr)).to.equal(true);
+    });
   });
 
   describe('modifyImmutable', () => {

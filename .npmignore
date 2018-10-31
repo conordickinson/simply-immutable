@@ -1,2 +1,5 @@
 lib/
 test/
+.vscode/
+.gitignore
+tsconfig.json

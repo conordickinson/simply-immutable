@@ -5,20 +5,24 @@ export const REMOVE = Symbol('ModifyRemove');
 
 type SpecialValues = typeof REMOVE;
 
-type ValueType<V> = V | SpecialValues | ((v: V) => V | SpecialValues);
+type ValueSetter<V> = (v: Readonly<V>) => (Readonly<V> | SpecialValues);
+type ValueType<V> = V | SpecialValues | ValueSetter<V>;
 
 
 function getType(v: any) {
-  if (Array.isArray(v)) {
-    return 'array';
+  const type = typeof v;
+  if (type === 'object') {
+    if (Array.isArray(v)) {
+      return 'array';
+    }
+    if (v === null) {
+      return 'null';
+    }
   }
-  if (v === null) {
-    return 'null';
-  }
-  return typeof v;
+  return type;
 }
 
-function cmpAndSet(dst: any, src: any) {
+function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
   if (dst === src) {
     return dst;
   }
@@ -34,7 +38,7 @@ function cmpAndSet(dst: any, src: any) {
   }
 
   if (dstType === 'array') {
-    let out = dst;
+    let out = dst as any;
     if (dst.length !== src.length) {
       out = dst.slice(0, src.length);
     }
@@ -54,7 +58,7 @@ function cmpAndSet(dst: any, src: any) {
   }
 
   if (dstType === 'object') {
-    let out = dst;
+    let out = dst as any;
     for (const key in src) {
       const newVal = cmpAndSet(dst[key], src[key]);
       if (newVal !== dst[key]) {
@@ -133,11 +137,11 @@ function modifyImmutableRecur<T>(root: T, path: Array<string|number>, value: any
   return root;
 }
 
-export function modifyImmutable<T>(root: T, path: Array<string|number>, value: any): T;
-export function modifyImmutable<T, V>(root: T, pathFunc: (root: T) => V, value: ValueType<V>): T;
-export function modifyImmutable<T, V, A>(root: T, pathFunc: (root: T, arg0: A) => V, value: ValueType<V>, arg0: A): T;
-export function modifyImmutable<T, V, A, B>(root: T, pathFunc: (root: T, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): T;
-export function modifyImmutable<T, V, A, B, C>(root: T, pathFunc: (root: T, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): T;
+export function modifyImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
+export function modifyImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
+export function modifyImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
+export function modifyImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): Readonly<T>;
+export function modifyImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
 export function modifyImmutable(root, path, value, ...paramValues) {
   if (Array.isArray(path)) {
     return modifyImmutableRecur(root, path, value);
@@ -153,7 +157,7 @@ export function modifyImmutable(root, path, value, ...paramValues) {
   return modifyImmutableRecur(root, realPath, value);
 }
 
-export function cloneImmutable<T>(root: T): T {
+export function cloneImmutable<T>(root: Readonly<T>): Readonly<T> {
   const rootType = getType(root);
   if (rootType === 'array') {
     const copy = (root as any).slice(0) as any[];
@@ -162,18 +166,18 @@ export function cloneImmutable<T>(root: T): T {
     }
     root = Object.freeze(copy) as any;
   } else if (rootType === 'object') {
-    const copy = Object.assign({}, root);
+    const copy: T = Object.assign({}, root);
     for (const key in copy) {
-      copy[key] = cloneImmutable(copy[key]);
+      copy[key] = cloneImmutable(copy[key]) as any; // cast needed to remove the Readonly<>
     }
     root = Object.freeze(copy);
   }
   return root;
 }
 
-export function filterImmutable<T>(obj: StashOf<T>, filter: (o: T) => boolean): StashOf<T>;
-export function filterImmutable<T>(arr: T[], filter: (o: T) => boolean): T[];
-export function filterImmutable<T>(val: StashOf<T> | T[], filter: (o: T) => boolean): StashOf<T> | T[] {
+export function filterImmutable<T>(obj: Readonly<StashOf<T>>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T>>;
+export function filterImmutable<T>(arr: Readonly<T[]>, filter: (o: Readonly<T>) => boolean): Readonly<T[]>;
+export function filterImmutable<T>(val: Readonly<StashOf<T> | T[]>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T> | T[]> {
   if (Array.isArray(val)) {
     return Object.freeze(val.filter(filter)) as T[];
   } else {
@@ -187,7 +191,7 @@ export function filterImmutable<T>(val: StashOf<T> | T[], filter: (o: T) => bool
   }
 }
 
-export function makeImmutable<T>(o: T): T {
+export function makeImmutable<T>(o: T): Readonly<T> {
   const type = getType(o);
   if (type === 'object') {
     for (const key in o) {
