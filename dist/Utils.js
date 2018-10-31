@@ -3,13 +3,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const FunctionParse_1 = require("./FunctionParse");
 exports.REMOVE = Symbol('ModifyRemove');
 function getType(v) {
-    if (Array.isArray(v)) {
-        return 'array';
+    const type = typeof v;
+    if (type === 'object') {
+        if (Array.isArray(v)) {
+            return 'array';
+        }
+        if (v === null) {
+            return 'null';
+        }
     }
-    if (v === null) {
-        return 'null';
-    }
-    return typeof v;
+    return type;
 }
 function cmpAndSet(dst, src) {
     if (dst === src) {
@@ -147,7 +150,7 @@ function cloneImmutable(root) {
     else if (rootType === 'object') {
         const copy = Object.assign({}, root);
         for (const key in copy) {
-            copy[key] = cloneImmutable(copy[key]);
+            copy[key] = cloneImmutable(copy[key]); // cast needed to remove the Readonly<>
         }
         root = Object.freeze(copy);
     }
