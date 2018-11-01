@@ -2,6 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const FunctionParse_1 = require("./FunctionParse");
 exports.REMOVE = Symbol('ModifyRemove');
+let gUseFreeze = true;
+function freezeImmutableStructures(useFreeze) {
+    gUseFreeze = useFreeze;
+}
+exports.freezeImmutableStructures = freezeImmutableStructures;
 function getType(v) {
     const type = typeof v;
     if (type === 'object') {
@@ -14,6 +19,42 @@ function getType(v) {
     }
     return type;
 }
+function isFrozen(o) {
+    try {
+        o.___isFrozen___ = 'no';
+    }
+    catch (err) {
+        return true;
+    }
+    delete o.___isFrozen___;
+    return false;
+}
+exports.isFrozen = isFrozen;
+function isDeepFrozen(o) {
+    const type = getType(o);
+    if (type === 'array') {
+        if (!isFrozen(o)) {
+            return false;
+        }
+        for (let i = 0; i < o.length; ++i) {
+            if (!isDeepFrozen(o[i])) {
+                return false;
+            }
+        }
+    }
+    else if (type === 'object') {
+        if (!isFrozen(o)) {
+            return false;
+        }
+        for (const key in o) {
+            if (!isDeepFrozen(o[key])) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+exports.isDeepFrozen = isDeepFrozen;
 function cmpAndSet(dst, src) {
     if (dst === src) {
         return dst;
@@ -42,7 +83,7 @@ function cmpAndSet(dst, src) {
                 out[i] = newVal;
             }
         }
-        if (out !== dst) {
+        if (gUseFreeze && out !== dst) {
             Object.freeze(out);
         }
         return out;
@@ -67,7 +108,7 @@ function cmpAndSet(dst, src) {
             }
             delete out[key];
         }
-        if (out !== dst) {
+        if (gUseFreeze && out !== dst) {
             Object.freeze(out);
         }
         return out;
@@ -119,7 +160,7 @@ function modifyImmutableRecur(root, path, value) {
             root[key] = newVal;
         }
     }
-    if (root !== oldRoot) {
+    if (gUseFreeze && root !== oldRoot) {
         Object.freeze(root);
     }
     return root;
@@ -145,47 +186,48 @@ function cloneImmutable(root) {
         for (let i = 0; i < copy.length; ++i) {
             copy[i] = cloneImmutable(copy[i]);
         }
-        root = Object.freeze(copy);
+        root = gUseFreeze ? Object.freeze(copy) : copy;
     }
     else if (rootType === 'object') {
         const copy = Object.assign({}, root);
         for (const key in copy) {
             copy[key] = cloneImmutable(copy[key]); // cast needed to remove the Readonly<>
         }
-        root = Object.freeze(copy);
+        root = gUseFreeze ? Object.freeze(copy) : copy;
     }
     return root;
 }
 exports.cloneImmutable = cloneImmutable;
 function filterImmutable(val, filter) {
+    let out;
     if (Array.isArray(val)) {
-        return Object.freeze(val.filter(filter));
+        out = val.filter(filter);
     }
     else {
-        const out = {};
+        out = {};
         for (const key in val) {
             if (filter(val[key])) {
                 out[key] = val[key];
             }
         }
-        return Object.freeze(out);
     }
+    return gUseFreeze ? Object.freeze(out) : out;
 }
 exports.filterImmutable = filterImmutable;
-function makeImmutable(o) {
+function deepFreeze(o) {
     const type = getType(o);
     if (type === 'object') {
         for (const key in o) {
-            makeImmutable(o[key]);
+            deepFreeze(o[key]);
         }
         Object.freeze(o);
     }
     else if (type === 'array') {
         for (let i = 0; i < o.length; ++i) {
-            makeImmutable(o[i]);
+            deepFreeze(o[i]);
         }
         Object.freeze(o);
     }
     return o;
 }
-exports.makeImmutable = makeImmutable;
+exports.deepFreeze = deepFreeze;

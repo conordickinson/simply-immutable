@@ -8,6 +8,11 @@ type SpecialValues = typeof REMOVE;
 type ValueSetter<V> = (v: Readonly<V>) => (Readonly<V> | SpecialValues);
 type ValueType<V> = V | SpecialValues | ValueSetter<V>;
 
+let gUseFreeze = true;
+
+export function freezeImmutableStructures(useFreeze: boolean) {
+  gUseFreeze = useFreeze;
+}
 
 function getType(v: any) {
   const type = typeof v;
@@ -20,6 +25,40 @@ function getType(v: any) {
     }
   }
   return type;
+}
+
+export function isFrozen(o: any) {
+  try {
+    o.___isFrozen___ = 'no';
+  } catch (err) {
+    return true;
+  }
+  delete o.___isFrozen___;
+  return false;
+}
+
+export function isDeepFrozen(o: any) {
+  const type = getType(o);
+  if (type === 'array') {
+    if (!isFrozen(o)) {
+      return false;
+    }
+    for (let i = 0; i < o.length; ++i) {
+      if (!isDeepFrozen(o[i])) {
+        return false;
+      }
+    }
+  } else if (type === 'object') {
+    if (!isFrozen(o)) {
+      return false;
+    }
+    for (const key in o) {
+      if (!isDeepFrozen(o[key])) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
@@ -51,7 +90,7 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
         out[i] = newVal;
       }
     }
-    if (out !== dst) {
+    if (gUseFreeze && out !== dst) {
       Object.freeze(out);
     }
     return out;
@@ -77,7 +116,7 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
       }
       delete out[key];
     }
-    if (out !== dst) {
+    if (gUseFreeze && out !== dst) {
       Object.freeze(out);
     }
     return out;
@@ -131,7 +170,7 @@ function modifyImmutableRecur<T>(root: T, path: Array<string|number>, value: any
     }
   }
 
-  if (root !== oldRoot) {
+  if (gUseFreeze && root !== oldRoot) {
     Object.freeze(root);
   }
   return root;
@@ -164,13 +203,13 @@ export function cloneImmutable<T>(root: Readonly<T>): Readonly<T> {
     for (let i = 0; i < copy.length; ++i) {
       copy[i] = cloneImmutable(copy[i]);
     }
-    root = Object.freeze(copy) as any;
+    root = gUseFreeze ? Object.freeze(copy) as any : copy;
   } else if (rootType === 'object') {
     const copy: T = Object.assign({}, root);
     for (const key in copy) {
       copy[key] = cloneImmutable(copy[key]) as any; // cast needed to remove the Readonly<>
     }
-    root = Object.freeze(copy);
+    root = gUseFreeze ? Object.freeze(copy) : copy;
   }
   return root;
 }
@@ -178,29 +217,30 @@ export function cloneImmutable<T>(root: Readonly<T>): Readonly<T> {
 export function filterImmutable<T>(obj: Readonly<StashOf<T>>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T>>;
 export function filterImmutable<T>(arr: Readonly<T[]>, filter: (o: Readonly<T>) => boolean): Readonly<T[]>;
 export function filterImmutable<T>(val: Readonly<StashOf<T> | T[]>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T> | T[]> {
+  let out;
   if (Array.isArray(val)) {
-    return Object.freeze(val.filter(filter)) as T[];
+    out = val.filter(filter) as T[];
   } else {
-    const out: StashOf<T> = {};
+    out = {} as StashOf<T>;
     for (const key in val) {
       if (filter(val[key])) {
         out[key] = val[key];
       }
     }
-    return Object.freeze(out);
   }
+  return gUseFreeze ? Object.freeze(out) : out;
 }
 
-export function makeImmutable<T>(o: T): Readonly<T> {
+export function deepFreeze<T>(o: T): Readonly<T> {
   const type = getType(o);
   if (type === 'object') {
     for (const key in o) {
-      makeImmutable(o[key]);
+      deepFreeze(o[key]);
     }
     Object.freeze(o);
   } else if (type === 'array') {
     for (let i = 0; i < (o as any).length; ++i) {
-      makeImmutable(o[i]);
+      deepFreeze(o[i]);
     }
     Object.freeze(o);
   }

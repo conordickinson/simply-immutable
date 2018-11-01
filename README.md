@@ -1,9 +1,13 @@
 # simply-immutable
 
-## makeImmutable
+## deepFreeze
 
 ## cloneImmutable
 
 ## filterImmutable
 
 ## modifyImmutable
+
+## isFrozen
+
+## isDeepFrozen
