@@ -61,6 +61,22 @@ export function isDeepFrozen(o: any) {
   return true;
 }
 
+function shallowClone<T>(o: T): T {
+  const out: T = {} as any;
+  for (const key in o) {
+    out[key] = o[key];
+  }
+  return out;
+}
+
+function shallowCloneArray<T>(a: T, len: number): T {
+  const out = new Array(len) as any;
+  for (let i = 0; i < len; ++i) {
+    out[i] = a[i];
+  }
+  return out;
+}
+
 function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
   if (dst === src) {
     return dst;
@@ -79,13 +95,13 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
   if (dstType === 'array') {
     let out = dst as any;
     if (dst.length !== src.length) {
-      out = dst.slice(0, src.length);
+      out = shallowCloneArray(dst, src.length);
     }
     for (let i = 0; i < src.length; ++i) {
       const newVal = cmpAndSet(dst[i], src[i]);
       if (newVal !== dst[i]) {
         if (out === dst) {
-          out = dst.slice(0);
+          out = shallowCloneArray(dst, dst.length);
         }
         out[i] = newVal;
       }
@@ -102,7 +118,7 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
       const newVal = cmpAndSet(dst[key], src[key]);
       if (newVal !== dst[key]) {
         if (out === dst) {
-          out = Object.assign({}, dst);
+          out = shallowClone(dst);
         }
         out[key] = newVal;
       }
@@ -112,7 +128,7 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
         continue;
       }
       if (out === dst) {
-        out = Object.assign({}, dst);
+        out = shallowClone(dst);
       }
       delete out[key];
     }
@@ -137,10 +153,10 @@ function modifyImmutableInternal<T>(root: T, path: Array<string|number>, value: 
     const key = path[i];
 
     if (typeof key === 'number' && curType !== 'array') {
-      root = [] as any as T;
+      leafVal = [] as any as T;
       curType = 'array';
     } else if (curType !== 'array' && curType !== 'object') {
-      root = {} as any as T;
+      leafVal = {} as any as T;
       curType = 'object';
     }
     parents[i] = leafVal;
@@ -161,9 +177,9 @@ function modifyImmutableInternal<T>(root: T, path: Array<string|number>, value: 
 
     if (newVal !== parent[key]) {
       if (parentType === 'array') {
-        parent = (parent as any).slice(0);
+        parent = shallowCloneArray(parent, parent.length);
       } else if (parentType === 'object') {
-        parent = Object.assign({}, parent);
+        parent = shallowClone(parent);
       }
       if (newVal === REMOVE) {
         if (parentType === 'array') {
@@ -208,13 +224,13 @@ export function modifyImmutable(root, path, value, ...paramValues) {
 export function cloneImmutable<T>(root: Readonly<T>): Readonly<T> {
   const rootType = getType(root);
   if (rootType === 'array') {
-    const copy = (root as any).slice(0) as any[];
+    const copy = shallowCloneArray(root, (root as any).length) as any;
     for (let i = 0; i < copy.length; ++i) {
       copy[i] = cloneImmutable(copy[i]);
     }
     root = gUseFreeze ? Object.freeze(copy) as any : copy;
   } else if (rootType === 'object') {
-    const copy: T = Object.assign({}, root);
+    const copy: T = shallowClone(root);
     for (const key in copy) {
       copy[key] = cloneImmutable(copy[key]) as any; // cast needed to remove the Readonly<>
     }
