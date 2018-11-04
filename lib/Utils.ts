@@ -165,9 +165,19 @@ function modifyImmutableInternal<T>(root: T, path: Array<string|number>, value: 
     const key = path[i];
 
     if (typeof key === 'number' && curType !== 'array') {
+      if (value === REMOVE) {
+        // do NOT create or change intermediate structures if doing a remove operation,
+        // just return the existing root because the target does not exist
+        return root;
+      }
       leafVal = [] as any as T;
       curType = 'array';
     } else if (curType !== 'array' && curType !== 'object') {
+      if (value === REMOVE) {
+        // do NOT create or change intermediate structures if doing a remove operation,
+        // just return the existing root because the target does not exist
+        return root;
+      }
       leafVal = {} as any as T;
       curType = 'object';
     }
