@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const FunctionParse_1 = require("./FunctionParse");
-exports.REMOVE = Symbol('ModifyRemove');
+const REMOVE = Symbol('ModifyRemove');
 let gUseFreeze = true;
 function freezeImmutableStructures(useFreeze) {
     gUseFreeze = useFreeze;
@@ -55,7 +55,21 @@ function isDeepFrozen(o) {
     return true;
 }
 exports.isDeepFrozen = isDeepFrozen;
-function cmpAndSet(dst, src) {
+function shallowClone(o) {
+    const out = {};
+    for (const key in o) {
+        out[key] = o[key];
+    }
+    return out;
+}
+function shallowCloneArray(a, len) {
+    const out = new Array(len);
+    for (let i = 0; i < len; ++i) {
+        out[i] = a[i];
+    }
+    return out;
+}
+function cmpAndSetOrMerge(dst, src, merge) {
     if (dst === src) {
         return dst;
     }
@@ -71,14 +85,15 @@ function cmpAndSet(dst, src) {
     }
     if (dstType === 'array') {
         let out = dst;
-        if (dst.length !== src.length) {
-            out = dst.slice(0, src.length);
+        const desiredLength = merge ? Math.max(src.length, dst.length) : src.length;
+        if (dst.length !== desiredLength) {
+            out = shallowCloneArray(dst, desiredLength);
         }
-        for (let i = 0; i < src.length; ++i) {
-            const newVal = cmpAndSet(dst[i], src[i]);
+        for (let i = 0; i < desiredLength; ++i) {
+            const newVal = cmpAndSetOrMerge(dst[i], src[i], false);
             if (newVal !== dst[i]) {
                 if (out === dst) {
-                    out = dst.slice(0);
+                    out = shallowCloneArray(dst, desiredLength);
                 }
                 out[i] = newVal;
             }
@@ -91,22 +106,24 @@ function cmpAndSet(dst, src) {
     if (dstType === 'object') {
         let out = dst;
         for (const key in src) {
-            const newVal = cmpAndSet(dst[key], src[key]);
+            const newVal = cmpAndSetOrMerge(dst[key], src[key], false);
             if (newVal !== dst[key]) {
                 if (out === dst) {
-                    out = Object.assign({}, dst);
+                    out = shallowClone(dst);
                 }
                 out[key] = newVal;
             }
         }
-        for (const key in dst) {
-            if (key in src) {
-                continue;
+        if (!merge) {
+            for (const key in dst) {
+                if (key in src) {
+                    continue;
+                }
+                if (out === dst) {
+                    out = shallowClone(dst);
+                }
+                delete out[key];
             }
-            if (out === dst) {
-                out = Object.assign({}, dst);
-            }
-            delete out[key];
         }
         if (gUseFreeze && out !== dst) {
             Object.freeze(out);
@@ -116,80 +133,104 @@ function cmpAndSet(dst, src) {
     // simple type
     return src;
 }
-function modifyImmutableRecur(root, path, value) {
-    if (path.length === 0) {
-        if (typeof value === 'function') {
-            value = value(root);
-        }
-        if (value === exports.REMOVE) {
-            // needs to be handled one level higher
-            return value;
-        }
-        return cmpAndSet(root, value);
-    }
-    const oldRoot = root;
-    const key = path[0];
-    const subpath = path.slice(1);
-    let rootType = getType(root);
-    if (typeof key === 'number' && rootType !== 'array') {
-        root = [];
-        rootType = 'array';
-    }
-    else if (rootType !== 'array' && rootType !== 'object') {
-        root = {};
-        rootType = 'object';
-    }
-    const oldVal = root[key];
-    const newVal = modifyImmutableRecur(oldVal, subpath, value);
-    if (newVal !== oldVal) {
-        if (rootType === 'array') {
-            root = root.slice(0);
-        }
-        else if (rootType === 'object') {
-            root = Object.assign({}, root);
-        }
-        if (newVal === exports.REMOVE) {
-            if (rootType === 'array') {
-                root.splice(key, 1);
-            }
-            else if (rootType === 'object') {
-                delete root[key];
-            }
-        }
-        else {
-            root[key] = newVal;
-        }
-    }
-    if (gUseFreeze && root !== oldRoot) {
-        Object.freeze(root);
-    }
-    return root;
+function cmpAndSet(dst, src) {
+    return cmpAndSetOrMerge(dst, src, false);
 }
-function modifyImmutable(root, path, value, ...paramValues) {
-    if (Array.isArray(path)) {
-        return modifyImmutableRecur(root, path, value);
-    }
-    const parsedPath = FunctionParse_1.parseFunction(path);
-    const realPath = parsedPath.map(p => {
-        if (typeof p === 'object' && typeof p.paramIdx === 'number') {
-            return paramValues[p.paramIdx];
-        }
-        return p;
-    });
-    return modifyImmutableRecur(root, realPath, value);
+function cmpAndMerge(dst, src) {
+    return cmpAndSetOrMerge(dst, src, true);
 }
-exports.modifyImmutable = modifyImmutable;
+function modifyImmutableInternal(root, path, value, updateFunc) {
+    const pathLength = path.length;
+    const parents = new Array(pathLength);
+    const parentTypes = [];
+    // walk down the object path, creating intermediate objects/arrays as needed
+    let leafVal = root;
+    for (let i = 0; i < path.length; ++i) {
+        let curType = getType(leafVal);
+        const key = path[i];
+        if (typeof key === 'number' && curType !== 'array') {
+            leafVal = [];
+            curType = 'array';
+        }
+        else if (curType !== 'array' && curType !== 'object') {
+            leafVal = {};
+            curType = 'object';
+        }
+        parents[i] = leafVal;
+        parentTypes[i] = curType;
+        leafVal = leafVal[key];
+    }
+    // update the value
+    if (typeof value === 'function') {
+        value = value(leafVal);
+    }
+    let newVal = value === REMOVE ? value : updateFunc(leafVal, value);
+    // walk back up the object path, cloning as needed
+    for (let i = pathLength - 1; i >= 0; --i) {
+        let parent = parents[i];
+        const parentType = parentTypes[i];
+        const key = path[i];
+        if (newVal !== parent[key]) {
+            if (parentType === 'array') {
+                parent = shallowCloneArray(parent, parent.length);
+            }
+            else if (parentType === 'object') {
+                parent = shallowClone(parent);
+            }
+            if (newVal === REMOVE) {
+                if (parentType === 'array') {
+                    parent.splice(key, 1);
+                }
+                else if (parentType === 'object') {
+                    delete parent[key];
+                }
+            }
+            else {
+                parent[key] = newVal;
+            }
+        }
+        if (gUseFreeze && parent !== parents[i]) {
+            Object.freeze(parent);
+        }
+        newVal = parent;
+    }
+    return newVal;
+}
+function normalizePath(path, paramValues) {
+    if (!Array.isArray(path)) {
+        const parsedPath = FunctionParse_1.parseFunction(path);
+        path = parsedPath.map(p => {
+            if (typeof p === 'object' && typeof p.paramIdx === 'number') {
+                return paramValues[p.paramIdx];
+            }
+            return p;
+        });
+    }
+    return path;
+}
+function replaceImmutable(root, path, value, ...paramValues) {
+    return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndSet);
+}
+exports.replaceImmutable = replaceImmutable;
+function updateImmutable(root, path, value, ...paramValues) {
+    return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndMerge);
+}
+exports.updateImmutable = updateImmutable;
+function deleteImmutable(root, path, ...paramValues) {
+    return modifyImmutableInternal(root, normalizePath(path, paramValues), REMOVE, cmpAndSet);
+}
+exports.deleteImmutable = deleteImmutable;
 function cloneImmutable(root) {
     const rootType = getType(root);
     if (rootType === 'array') {
-        const copy = root.slice(0);
+        const copy = shallowCloneArray(root, root.length);
         for (let i = 0; i < copy.length; ++i) {
             copy[i] = cloneImmutable(copy[i]);
         }
         root = gUseFreeze ? Object.freeze(copy) : copy;
     }
     else if (rootType === 'object') {
-        const copy = Object.assign({}, root);
+        const copy = shallowClone(root);
         for (const key in copy) {
             copy[key] = cloneImmutable(copy[key]); // cast needed to remove the Readonly<>
         }
