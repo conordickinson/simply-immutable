@@ -6,7 +6,11 @@
 
 ## filterImmutable
 
-## modifyImmutable
+## replaceImmutable
+
+## updateImmutable
+
+## deleteImmutable
 
 ## isFrozen
 
