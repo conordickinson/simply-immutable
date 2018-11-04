@@ -61,6 +61,22 @@ export function isDeepFrozen(o: any) {
   return true;
 }
 
+function shallowClone<T>(o: T): T {
+  const out: T = {} as any;
+  for (const key in o) {
+    out[key] = o[key];
+  }
+  return out;
+}
+
+function shallowCloneArray<T>(a: T, len: number): T {
+  const out = new Array(len) as any;
+  for (let i = 0; i < len; ++i) {
+    out[i] = a[i];
+  }
+  return out;
+}
+
 function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
   if (dst === src) {
     return dst;
@@ -79,13 +95,13 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
   if (dstType === 'array') {
     let out = dst as any;
     if (dst.length !== src.length) {
-      out = dst.slice(0, src.length);
+      out = shallowCloneArray(dst, src.length);
     }
     for (let i = 0; i < src.length; ++i) {
       const newVal = cmpAndSet(dst[i], src[i]);
       if (newVal !== dst[i]) {
         if (out === dst) {
-          out = dst.slice(0);
+          out = shallowCloneArray(dst, dst.length);
         }
         out[i] = newVal;
       }
@@ -102,7 +118,7 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
       const newVal = cmpAndSet(dst[key], src[key]);
       if (newVal !== dst[key]) {
         if (out === dst) {
-          out = Object.assign({}, dst);
+          out = shallowClone(dst);
         }
         out[key] = newVal;
       }
@@ -112,7 +128,7 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
         continue;
       }
       if (out === dst) {
-        out = Object.assign({}, dst);
+        out = shallowClone(dst);
       }
       delete out[key];
     }
@@ -126,54 +142,63 @@ function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
   return src;
 }
 
-function modifyImmutableRecur<T>(root: T, path: Array<string|number>, value: any): T {
-  if (path.length === 0) {
-    if (typeof value === 'function') {
-      value = value(root);
+function modifyImmutableInternal<T>(root: T, path: Array<string|number>, value: any): T {
+  const pathLength = path.length;
+  const parents: any[] = new Array(pathLength);
+  const parentTypes: string[] = [];
+
+  let leafVal = root;
+  for (let i = 0; i < path.length; ++i) {
+    let curType = getType(leafVal);
+    const key = path[i];
+
+    if (typeof key === 'number' && curType !== 'array') {
+      leafVal = [] as any as T;
+      curType = 'array';
+    } else if (curType !== 'array' && curType !== 'object') {
+      leafVal = {} as any as T;
+      curType = 'object';
     }
-    if (value === REMOVE) {
-      // needs to be handled one level higher
-      return value;
-    }
-    return cmpAndSet(root, value);
+    parents[i] = leafVal;
+    parentTypes[i] = curType;
+    leafVal = leafVal[key];
   }
 
-  const oldRoot = root;
-  const key = path[0];
-  const subpath = path.slice(1);
-  let rootType = getType(root);
-
-  if (typeof key === 'number' && rootType !== 'array') {
-    root = [] as any as T;
-    rootType = 'array';
-  } else if (rootType !== 'array' && rootType !== 'object') {
-    root = {} as any as T;
-    rootType = 'object';
+  if (typeof value === 'function') {
+    value = value(leafVal);
   }
 
-  const oldVal = root[key];
-  const newVal = modifyImmutableRecur(oldVal, subpath, value);
-  if (newVal !== oldVal) {
-    if (rootType === 'array') {
-      root = (root as any).slice(0);
-    } else if (rootType === 'object') {
-      root = Object.assign({}, root);
-    }
-    if (newVal === REMOVE) {
-      if (rootType === 'array') {
-        (root as any).splice(key, 1);
-      } else if (rootType === 'object') {
-        delete root[key];
+  let newVal = value === REMOVE ? value : cmpAndSet(leafVal, value);
+
+  for (let i = pathLength - 1; i >= 0; --i) {
+    let parent = parents[i];
+    const parentType = parentTypes[i];
+    const key = path[i];
+
+    if (newVal !== parent[key]) {
+      if (parentType === 'array') {
+        parent = shallowCloneArray(parent, parent.length);
+      } else if (parentType === 'object') {
+        parent = shallowClone(parent);
       }
-    } else {
-      root[key] = newVal;
+      if (newVal === REMOVE) {
+        if (parentType === 'array') {
+          (parent as any).splice(key, 1);
+        } else if (parentType === 'object') {
+          delete parent[key];
+        }
+      } else {
+        parent[key] = newVal;
+      }
     }
+
+    if (gUseFreeze && parent !== parents[i]) {
+      Object.freeze(parent);
+    }
+    newVal = parent;
   }
 
-  if (gUseFreeze && root !== oldRoot) {
-    Object.freeze(root);
-  }
-  return root;
+  return newVal;
 }
 
 export function modifyImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
@@ -183,7 +208,7 @@ export function modifyImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: 
 export function modifyImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
 export function modifyImmutable(root, path, value, ...paramValues) {
   if (Array.isArray(path)) {
-    return modifyImmutableRecur(root, path, value);
+    return modifyImmutableInternal(root, path, value);
   }
 
   const parsedPath = parseFunction(path);
@@ -193,19 +218,19 @@ export function modifyImmutable(root, path, value, ...paramValues) {
     }
     return p;
   });
-  return modifyImmutableRecur(root, realPath, value);
+  return modifyImmutableInternal(root, realPath, value);
 }
 
 export function cloneImmutable<T>(root: Readonly<T>): Readonly<T> {
   const rootType = getType(root);
   if (rootType === 'array') {
-    const copy = (root as any).slice(0) as any[];
+    const copy = shallowCloneArray(root, (root as any).length) as any;
     for (let i = 0; i < copy.length; ++i) {
       copy[i] = cloneImmutable(copy[i]);
     }
     root = gUseFreeze ? Object.freeze(copy) as any : copy;
   } else if (rootType === 'object') {
-    const copy: T = Object.assign({}, root);
+    const copy: T = shallowClone(root);
     for (const key in copy) {
       copy[key] = cloneImmutable(copy[key]) as any; // cast needed to remove the Readonly<>
     }

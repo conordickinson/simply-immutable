@@ -5,7 +5,8 @@
   "main": "dist/Utils",
   "scripts": {
     "build": "./node_modules/.bin/tsc",
-    "test": "mocha -r ts-node/register test/**/*-test.ts"
+    "test": "mocha -r ts-node/register test/**/*-test.ts",
+    "benchmark": "./node_modules/.bin/ts-node benchmark/index.ts"
   },
   "repository": {
     "type": "git",
@@ -28,6 +29,7 @@
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.5.2",
     "chai": "^4.1.2",
+    "immutable-benchmark-lib": "^1.0.0",
     "mocha": "^5.2.0",
     "ts-node": "^7.0.0",
     "typescript": "^2.9.2"
