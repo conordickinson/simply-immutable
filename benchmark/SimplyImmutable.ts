@@ -1,4 +1,4 @@
-import { freezeImmutableStructures, modifyImmutable } from '../lib/Utils';
+import { freezeImmutableStructures, replaceImmutable, updateImmutable } from '../lib/Utils';
 
 import { TestSuite } from 'immutable-benchmark-lib/dist/TestSuite';
 
@@ -13,27 +13,26 @@ export class SimplyImmutable extends TestSuite {
   }
   
   set(obj, key, val) {
-    return modifyImmutable(obj, [key], val);
+    return replaceImmutable(obj, [key], val);
   }
   
   setDeep(obj, key1, key2, val) {
-    return modifyImmutable(obj, [key1, key2], val);
+    return replaceImmutable(obj, [key1, key2], val);
   }
   
   setIn(obj, path, val) {
-    return modifyImmutable(obj, path, val);
+    return replaceImmutable(obj, path, val);
   }
   
   merge(obj1, obj2) {
-    const r = Object.assign({}, obj1, obj2);
-    return modifyImmutable(obj1, [], r);
+    return updateImmutable(obj1, [], obj2);
   }
   
   setAt(arr: any[], idx: number, val: any) {
-    return modifyImmutable(arr, [idx], val);
+    return replaceImmutable(arr, [idx], val);
   }
   
   setAtDeep(arr: any[][], idx1: number, idx2: number, val: any) {
-    return modifyImmutable(arr, [idx1, idx2], val);
+    return replaceImmutable(arr, [idx1, idx2], val);
   }
 }

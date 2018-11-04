@@ -1,4 +1,4 @@
-import { cloneImmutable, deepFreeze, filterImmutable, isDeepFrozen, isFrozen, modifyImmutable, REMOVE } from '../lib/Utils';
+import { cloneImmutable, deleteImmutable, deepFreeze, filterImmutable, isDeepFrozen, isFrozen, replaceImmutable } from '../lib/Utils';
 
 import * as chai from 'chai';
 
@@ -79,10 +79,10 @@ describe('Utils', () => {
     });
   });
 
-  describe('modifyImmutable', () => {
+  describe('replaceImmutable', () => {
     it('should modify at the root', () => {
       const obj: Stash = deepFreeze({});
-      const newObj = modifyImmutable(obj, o => o.foo, [ {} ]);
+      const newObj = replaceImmutable(obj, o => o.foo, [ {} ]);
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({
         foo: [ {} ],
@@ -92,7 +92,7 @@ describe('Utils', () => {
 
     it('should add field to object', () => {
       const obj = deepFreeze({ foo: [ {} as Stash ] });
-      const newObj = modifyImmutable(obj, o => o.foo[0].bar, 'hello');
+      const newObj = replaceImmutable(obj, o => o.foo[0].bar, 'hello');
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({
         foo: [ { bar: 'hello' } ],
@@ -102,7 +102,7 @@ describe('Utils', () => {
 
     it('should add element to array', () => {
       const obj = deepFreeze({ foo: [ {} ] });
-      const newObj = modifyImmutable(obj, o => o.foo[1], 'hello');
+      const newObj = replaceImmutable(obj, o => o.foo[1], 'hello');
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({
         foo: [ {}, 'hello' ],
@@ -113,7 +113,7 @@ describe('Utils', () => {
 
     it('should ignore simple changes that do not change anything', () => {
       const obj = deepFreeze({ foo: [ { bar: 'hello' } ] });
-      const newObj = modifyImmutable(obj, o => o.foo[0].bar, 'hello');
+      const newObj = replaceImmutable(obj, o => o.foo[0].bar, 'hello');
       expect(newObj).to.equal(obj);
       expect(newObj).to.deep.equal({
         foo: [ { bar: 'hello' } ],
@@ -123,7 +123,7 @@ describe('Utils', () => {
 
     it('should ignore complex changes that do not change anything', () => {
       const obj = deepFreeze({ foo: [ { bar: 'hello' } ] });
-      const newObj = modifyImmutable(obj, o => o.foo, [ { bar: 'hello' } ]);
+      const newObj = replaceImmutable(obj, o => o.foo, [ { bar: 'hello' } ]);
       expect(newObj).to.equal(obj);
       expect(newObj).to.deep.equal({
         foo: [ { bar: 'hello' } ],
@@ -133,7 +133,7 @@ describe('Utils', () => {
 
     it('should apply minimal change', () => {
       const obj = deepFreeze({ foo: [ { bar: { boz: true } } as Stash ] });
-      const newObj = modifyImmutable(obj, o => o.foo, [ { bar: { boz: true }, baz: 'goodbye' } ]);
+      const newObj = replaceImmutable(obj, o => o.foo, [ { bar: { boz: true }, baz: 'goodbye' } ]);
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({
         foo: [ { bar: { boz: true }, baz: 'goodbye' } ],
@@ -144,7 +144,7 @@ describe('Utils', () => {
 
     it('should work with function value setter', () => {
       const obj = deepFreeze({ foo: [2] });
-      const newObj = modifyImmutable(obj, o => o.foo, v => v.concat(1));
+      const newObj = replaceImmutable(obj, o => o.foo, v => v.concat(1));
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({
         foo: [ 2, 1 ],
@@ -154,7 +154,7 @@ describe('Utils', () => {
 
     it('should deep clone objects into the destination', () => {
       const src = deepFreeze({ foo: { bar: { baz: 1 } } });
-      const newObj = modifyImmutable({} as Stash, [], src);
+      const newObj = replaceImmutable({} as Stash, [], src);
       expect(newObj).to.deep.equal(src);
       expect(newObj).to.not.equal(src);
       expect(newObj.foo).to.not.equal(src.foo);
@@ -164,7 +164,7 @@ describe('Utils', () => {
 
     it('should deep clone arrays into the destination', () => {
       const src = deepFreeze({ foo: [ [1, 2], [3, 4] ] });
-      const newObj = modifyImmutable({} as Stash, [], src);
+      const newObj = replaceImmutable({} as Stash, [], src);
       expect(newObj).to.deep.equal(src);
       expect(newObj).to.not.equal(src);
       expect(newObj.foo).to.not.equal(src.foo);
@@ -175,23 +175,26 @@ describe('Utils', () => {
 
     it('should remove object subfields on update', () => {
       const obj = deepFreeze({ foo: { a: 1, b: 2, c: 3 } as Stash });
-      const newObj = modifyImmutable(obj, o => o.foo, { a: 1, c: 3 });
+      const newObj = replaceImmutable(obj, o => o.foo, { a: 1, c: 3 });
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({ foo: { a: 1, c: 3 } });
       expect(isDeepFrozen(newObj)).to.equal(true);
     });
 
-    it('should remove object members with REMOVE', () => {
+  });
+
+  describe('deleteImmutable', () => {
+    it('should delete object members', () => {
       const obj = deepFreeze({ foo: { a: 1, b: 2, c: 3 } });
-      const newObj = modifyImmutable(obj, o => o.foo.b, REMOVE);
+      const newObj = deleteImmutable(obj, o => o.foo.b);
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({ foo: { a: 1, c: 3 } });
       expect(isDeepFrozen(newObj)).to.equal(true);
     });
 
-    it('should remove array elements with REMOVE', () => {
+    it('should delete array elements', () => {
       const obj = deepFreeze({ foo: [ 1, 2, 3 ] });
-      const newObj = modifyImmutable(obj, o => o.foo[1], REMOVE);
+      const newObj = deleteImmutable(obj, o => o.foo[1]);
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({ foo: [1, 3] });
       expect(isDeepFrozen(newObj)).to.equal(true);
