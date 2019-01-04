@@ -19,8 +19,16 @@ Merges object/array fields into the target object/array.
 Deep compare on updating object fields to minimally change structure.
 Creates intermediate objects/arrays as necessary.
 
+## deepUpdateImmutable
+Merges object/array fields into the target object/array; merging happens recursively (unlike updateImmutable, which only merges at the first level).
+Deep compare on updating object fields to minimally change structure.
+Creates intermediate objects/arrays as necessary.
+
 ## deleteImmutable
 Removes target field.
+
+## diffImmutable
+Given two objects/arrays, generates a diff that can be applied to the second parameter (using deepUpdateImmutable) to get the first parameter.
 
 ## filterImmutable
 Filters out members of an object/array based on a filter function.

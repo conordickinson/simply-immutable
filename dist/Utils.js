@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const FunctionParse_1 = require("./FunctionParse");
-const REMOVE = Symbol('ModifyRemove');
+exports.REMOVE = Symbol('ModifyRemove');
 let gUseFreeze = true;
 function freezeImmutableStructures(useFreeze) {
     gUseFreeze = useFreeze;
@@ -69,7 +69,7 @@ function shallowCloneArray(a, len) {
     }
     return out;
 }
-function cmpAndSetOrMerge(dst, src, merge) {
+function cmpAndSetOrMerge(dst, src, merge, deepMerge) {
     if (dst === src) {
         return dst;
     }
@@ -85,17 +85,27 @@ function cmpAndSetOrMerge(dst, src, merge) {
     }
     if (dstType === 'array') {
         let out = dst;
-        const desiredLength = merge ? Math.max(src.length, dst.length) : src.length;
+        let desiredLength = merge ? Math.max(src.length, dst.length) : src.length;
         if (dst.length !== desiredLength) {
             out = shallowCloneArray(dst, desiredLength);
         }
-        for (let i = 0; i < desiredLength; ++i) {
-            const newVal = cmpAndSetOrMerge(dst[i], src[i], false);
+        for (let i = desiredLength - 1; i >= 0; --i) {
+            if (merge && !src.hasOwnProperty(i)) {
+                // merge sparse arrays
+                continue;
+            }
+            const newVal = cmpAndSetOrMerge(dst[i], src[i], deepMerge, deepMerge);
             if (newVal !== dst[i]) {
                 if (out === dst) {
                     out = shallowCloneArray(dst, desiredLength);
                 }
-                out[i] = newVal;
+                if (newVal === exports.REMOVE) {
+                    out.splice(i, 1);
+                    --desiredLength;
+                }
+                else {
+                    out[i] = newVal;
+                }
             }
         }
         if (gUseFreeze && out !== dst) {
@@ -106,12 +116,17 @@ function cmpAndSetOrMerge(dst, src, merge) {
     if (dstType === 'object') {
         let out = dst;
         for (const key in src) {
-            const newVal = cmpAndSetOrMerge(dst[key], src[key], false);
+            const newVal = cmpAndSetOrMerge(dst[key], src[key], deepMerge, deepMerge);
             if (newVal !== dst[key]) {
                 if (out === dst) {
                     out = shallowClone(dst);
                 }
-                out[key] = newVal;
+                if (newVal === exports.REMOVE) {
+                    delete out[key];
+                }
+                else {
+                    out[key] = newVal;
+                }
             }
         }
         if (!merge) {
@@ -134,10 +149,13 @@ function cmpAndSetOrMerge(dst, src, merge) {
     return src;
 }
 function cmpAndSet(dst, src) {
-    return cmpAndSetOrMerge(dst, src, false);
+    return cmpAndSetOrMerge(dst, src, false, false);
 }
 function cmpAndMerge(dst, src) {
-    return cmpAndSetOrMerge(dst, src, true);
+    return cmpAndSetOrMerge(dst, src, true, false);
+}
+function cmpAndDeepMerge(dst, src) {
+    return cmpAndSetOrMerge(dst, src, true, true);
 }
 function modifyImmutableInternal(root, path, value, updateFunc) {
     const pathLength = path.length;
@@ -149,7 +167,7 @@ function modifyImmutableInternal(root, path, value, updateFunc) {
         let curType = getType(leafVal);
         const key = path[i];
         if (typeof key === 'number' && curType !== 'array') {
-            if (value === REMOVE) {
+            if (value === exports.REMOVE) {
                 // do NOT create or change intermediate structures if doing a remove operation,
                 // just return the existing root because the target does not exist
                 return root;
@@ -158,7 +176,7 @@ function modifyImmutableInternal(root, path, value, updateFunc) {
             curType = 'array';
         }
         else if (curType !== 'array' && curType !== 'object') {
-            if (value === REMOVE) {
+            if (value === exports.REMOVE) {
                 // do NOT create or change intermediate structures if doing a remove operation,
                 // just return the existing root because the target does not exist
                 return root;
@@ -174,7 +192,7 @@ function modifyImmutableInternal(root, path, value, updateFunc) {
     if (typeof value === 'function') {
         value = value(leafVal);
     }
-    let newVal = value === REMOVE ? value : updateFunc(leafVal, value);
+    let newVal = value === exports.REMOVE ? value : updateFunc(leafVal, value);
     // walk back up the object path, cloning as needed
     for (let i = pathLength - 1; i >= 0; --i) {
         let parent = parents[i];
@@ -187,7 +205,7 @@ function modifyImmutableInternal(root, path, value, updateFunc) {
             else if (parentType === 'object') {
                 parent = shallowClone(parent);
             }
-            if (newVal === REMOVE) {
+            if (newVal === exports.REMOVE) {
                 if (parentType === 'array') {
                     parent.splice(key, 1);
                 }
@@ -226,8 +244,12 @@ function updateImmutable(root, path, value, ...paramValues) {
     return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndMerge);
 }
 exports.updateImmutable = updateImmutable;
+function deepUpdateImmutable(root, path, value, ...paramValues) {
+    return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndDeepMerge);
+}
+exports.deepUpdateImmutable = deepUpdateImmutable;
 function deleteImmutable(root, path, ...paramValues) {
-    return modifyImmutableInternal(root, normalizePath(path, paramValues), REMOVE, cmpAndSet);
+    return modifyImmutableInternal(root, normalizePath(path, paramValues), exports.REMOVE, cmpAndSet);
 }
 exports.deleteImmutable = deleteImmutable;
 function cloneImmutable(root) {
@@ -282,3 +304,58 @@ function deepFreeze(o) {
     return o;
 }
 exports.deepFreeze = deepFreeze;
+function diffImmutable(oNew, oOld) {
+    if (oNew === oOld) {
+        return undefined;
+    }
+    return diffImmutableRecur(oNew, oOld);
+}
+exports.diffImmutable = diffImmutable;
+function diffImmutableRecur(o, oOld) {
+    const type = getType(o);
+    const typeOld = getType(oOld);
+    if (type !== typeOld) {
+        return o;
+    }
+    if (type === 'object') {
+        const diff = {};
+        for (const key in o) {
+            const child = o[key];
+            const childOld = oOld[key];
+            if (!(key in oOld)) {
+                diff[key] = child;
+                continue;
+            }
+            if (child === childOld) {
+                continue;
+            }
+            diff[key] = diffImmutableRecur(child, childOld);
+        }
+        for (const key in oOld) {
+            if (!(key in o)) {
+                diff[key] = exports.REMOVE;
+            }
+        }
+        return gUseFreeze ? Object.freeze(diff) : diff;
+    }
+    else if (type === 'array') {
+        const a = o;
+        const aOld = oOld;
+        const diff = [];
+        for (let i = 0; i < a.length; ++i) {
+            if (i >= aOld.length) {
+                diff[i] = a[i];
+            }
+            else if (a[i] !== aOld[i]) {
+                diff[i] = diffImmutableRecur(a[i], aOld[i]);
+            }
+        }
+        for (let i = a.length; i < aOld.length; ++i) {
+            diff[i] = exports.REMOVE;
+        }
+        return gUseFreeze ? Object.freeze(diff) : diff;
+    }
+    else {
+        return o;
+    }
+}

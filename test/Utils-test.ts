@@ -1,4 +1,4 @@
-import { cloneImmutable, deleteImmutable, deepFreeze, filterImmutable, isDeepFrozen, isFrozen, replaceImmutable } from '../lib/Utils';
+import { cloneImmutable, deleteImmutable, deepFreeze, deepUpdateImmutable, diffImmutable, filterImmutable, isDeepFrozen, isFrozen, replaceImmutable, REMOVE } from '../lib/Utils';
 
 import * as chai from 'chai';
 
@@ -198,6 +198,68 @@ describe('Utils', () => {
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({ foo: [1, 3] });
       expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+  });
+
+  describe('diffImmutable', () => {
+    it('should diff objects', () => {
+      const a = deepFreeze({ a: 1, b: 2, c: 'foo' });
+      const b = deepFreeze({ a: 2, c: 'foo', d: 'goo' });
+
+      const diff = diffImmutable(b, a);
+      expect(isDeepFrozen(diff)).to.equal(true);
+      expect(diff).to.deep.equal({
+        a: 2,
+        b: REMOVE,
+        d: 'goo',
+      });
+
+      const newObj = deepUpdateImmutable(a, [], diff);
+      expect(newObj).to.deep.equal(b);
+    });
+    it('should diff arrays', () => {
+      const a = deepFreeze([ 1, 20, 10, 'boo', 'foo' ]);
+      const b = deepFreeze([ 1, 15, 10, 'boo' ]);
+
+      const diff = diffImmutable(b, a);
+      expect(isDeepFrozen(diff)).to.equal(true);
+      expect(diff).to.deep.equal([ undefined, 15, undefined, undefined, REMOVE ]);
+
+      // should be a sparse array:
+      expect(diff.hasOwnProperty(0)).to.equal(false);
+      expect(diff.hasOwnProperty(1)).to.equal(true);
+      expect(diff.hasOwnProperty(2)).to.equal(false);
+      expect(diff.hasOwnProperty(3)).to.equal(false);
+      expect(diff.hasOwnProperty(4)).to.equal(true);
+
+      const newArr = deepUpdateImmutable(a, [], diff);
+      expect(newArr).to.deep.equal(b);
+    });
+    it('should diff recursively', () => {
+      const a = deepFreeze({
+        a: 1,
+        b: {
+          abra: 'cadabra',
+          hello: 'goodbye',
+        },
+        c: 'foo',
+        d: [ 'my', 'first', 'array', { foo: 'bar' }],
+      });
+      let b = replaceImmutable(a, o => o.b.abra, 'bada');
+      b = deleteImmutable(b, ['d', 3, 'foo']);
+      b = replaceImmutable(b, ['d', 1], 'modified');
+
+      const diff = diffImmutable(b, a);
+      expect(isDeepFrozen(diff)).to.equal(true);
+      expect(diff).to.deep.equal({
+        b: {
+          abra: 'bada',
+        },
+        d: [ undefined, 'modified', undefined, { foo: REMOVE } ],
+      });
+
+      const newObj = deepUpdateImmutable(a, [], diff);
+      expect(newObj).to.deep.equal(b);
     });
   });
 });

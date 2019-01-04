@@ -1,7 +1,7 @@
 type StashOf<T> = { [key: string]: T };
 import { parseFunction } from './FunctionParse';
 
-const REMOVE = Symbol('ModifyRemove');
+export const REMOVE = Symbol('ModifyRemove');
 
 type ValueSetter<V> = (v: Readonly<V>) => Readonly<V>;
 type ValueType<V> = V | ValueSetter<V>;
@@ -75,7 +75,7 @@ function shallowCloneArray<T>(a: T, len: number): T {
   return out;
 }
 
-function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean) {
+function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean, deepMerge: boolean) {
   if (dst === src) {
     return dst;
   }
@@ -92,17 +92,26 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
 
   if (dstType === 'array') {
     let out = dst as any;
-    const desiredLength = merge ? Math.max(src.length, dst.length) : src.length;
+    let desiredLength = merge ? Math.max(src.length, dst.length) : src.length;
     if (dst.length !== desiredLength) {
       out = shallowCloneArray(dst, desiredLength);
     }
-    for (let i = 0; i < desiredLength; ++i) {
-      const newVal = cmpAndSetOrMerge(dst[i], src[i], false);
+    for (let i = desiredLength - 1; i >= 0; --i) {
+      if (merge && !src.hasOwnProperty(i)) {
+        // merge sparse arrays
+        continue;
+      }
+      const newVal = cmpAndSetOrMerge(dst[i], src[i], deepMerge, deepMerge);
       if (newVal !== dst[i]) {
         if (out === dst) {
           out = shallowCloneArray(dst, desiredLength);
         }
-        out[i] = newVal;
+        if (newVal === REMOVE) {
+          out.splice(i, 1);
+          --desiredLength;
+        } else {
+          out[i] = newVal;
+        }
       }
     }
     if (gUseFreeze && out !== dst) {
@@ -114,12 +123,16 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
   if (dstType === 'object') {
     let out = dst as any;
     for (const key in src) {
-      const newVal = cmpAndSetOrMerge(dst[key], src[key], false);
+      const newVal = cmpAndSetOrMerge(dst[key], src[key], deepMerge, deepMerge);
       if (newVal !== dst[key]) {
         if (out === dst) {
           out = shallowClone(dst);
         }
-        out[key] = newVal;
+        if (newVal === REMOVE) {
+          delete out[key];
+        } else {
+          out[key] = newVal;
+        }
       }
     }
     if (!merge) {
@@ -144,11 +157,15 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
 }
 
 function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
-  return cmpAndSetOrMerge(dst, src, false);
+  return cmpAndSetOrMerge(dst, src, false, false);
 }
 
 function cmpAndMerge(dst: Readonly<any>, src: Readonly<any>) {
-  return cmpAndSetOrMerge(dst, src, true);
+  return cmpAndSetOrMerge(dst, src, true, false);
+}
+
+function cmpAndDeepMerge(dst: Readonly<any>, src: Readonly<any>) {
+  return cmpAndSetOrMerge(dst, src, true, true);
 }
 
 type UpdateFunc = (dst: Readonly<any>, src: Readonly<any>) => any;
@@ -257,6 +274,15 @@ export function updateImmutable(root, path, value, ...paramValues) {
   return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndMerge);
 }
 
+export function deepUpdateImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
+export function deepUpdateImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
+export function deepUpdateImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
+export function deepUpdateImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): Readonly<T>;
+export function deepUpdateImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
+export function deepUpdateImmutable(root, path, value, ...paramValues) {
+  return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndDeepMerge);
+}
+
 export function deleteImmutable<T>(root: Readonly<T>, path: Array<string|number>): Readonly<T>;
 export function deleteImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V): Readonly<T>;
 export function deleteImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, arg0: A): Readonly<T>;
@@ -315,4 +341,60 @@ export function deepFreeze<T>(o: T): Readonly<T> {
     Object.freeze(o);
   }
   return o;
+}
+
+export function diffImmutable(oNew: any, oOld: any): undefined | any {
+  if (oNew === oOld) {
+    return undefined;
+  }
+
+  return diffImmutableRecur(oNew, oOld);
+}
+
+function diffImmutableRecur(o: any, oOld: any): undefined | any {
+  const type = getType(o);
+  const typeOld = getType(oOld);
+
+  if (type !== typeOld) {
+    return o;
+  }
+
+  if (type === 'object') {
+    const diff = {};
+    for (const key in o) {
+      const child = o[key];
+      const childOld = oOld[key];
+      if (!(key in oOld)) {
+        diff[key] = child;
+        continue;
+      }
+      if (child === childOld) {
+        continue;
+      }
+      diff[key] = diffImmutableRecur(child, childOld) as any;
+    }
+    for (const key in oOld) {
+      if (!(key in o)) {
+        diff[key] = REMOVE as any;
+      }
+    }
+    return gUseFreeze ? Object.freeze(diff) : diff;
+  } else if (type === 'array') {
+    const a = o as any as any[];
+    const aOld = oOld as any as any[];
+    const diff: any[] = [];
+    for (let i = 0; i < a.length; ++i) {
+      if (i >= aOld.length) {
+        diff[i] = a[i];
+      } else if (a[i] !== aOld[i]) {
+        diff[i] = diffImmutableRecur(a[i], aOld[i]);
+      }
+    }
+    for (let i = a.length; i < aOld.length; ++i) {
+      diff[i] = REMOVE;
+    }
+    return gUseFreeze ? Object.freeze(diff) : diff;
+  } else {
+    return o;
+  }
 }
