@@ -241,7 +241,7 @@ function modifyImmutableInternal<T>(root: T, path: Array<string|number>, value: 
   return newVal;
 }
 
-function normalizePath(path, paramValues): string[] {
+function normalizePath(path, paramValues: any[]): string[] {
   if (!Array.isArray(path)) {
     const parsedPath = parseFunction(path);
     path = parsedPath.map(p => {
@@ -256,31 +256,40 @@ function normalizePath(path, paramValues): string[] {
 
 // no need for a createImmutable function, since replaceImmutable also handles that case
 
+export function replaceImmutable<T, V extends T>(root: Readonly<T>, value: V): Readonly<T & V>;
 export function replaceImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
 export function replaceImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
 export function replaceImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
 export function replaceImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): Readonly<T>;
 export function replaceImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
-export function replaceImmutable(root, path, value, ...paramValues) {
-  return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndSet);
+export function replaceImmutable(root, ...args) {
+  const path = args.length === 1 ? [] : args.shift();
+  const value = args.shift();
+  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndSet);
 }
 
+export function updateImmutable<T>(root: Readonly<T>, value: Readonly<Partial<T>>): Readonly<T>;
 export function updateImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
 export function updateImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
 export function updateImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
 export function updateImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): Readonly<T>;
 export function updateImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
-export function updateImmutable(root, path, value, ...paramValues) {
-  return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndMerge);
+export function updateImmutable(root, ...args) {
+  const path = args.length === 1 ? [] : args.shift();
+  const value = args.shift();
+  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndMerge);
 }
 
+export function deepUpdateImmutable<T>(root: Readonly<T>, value: Readonly<Partial<T>>): Readonly<T>;
 export function deepUpdateImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
 export function deepUpdateImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
 export function deepUpdateImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
 export function deepUpdateImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): Readonly<T>;
 export function deepUpdateImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
-export function deepUpdateImmutable(root, path, value, ...paramValues) {
-  return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndDeepMerge);
+export function deepUpdateImmutable(root, ...args) {
+  const path = args.length === 1 ? [] : args.shift();
+  const value = args.shift();
+  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndDeepMerge);
 }
 
 export function deleteImmutable<T>(root: Readonly<T>, path: Array<string|number>): Readonly<T>;
