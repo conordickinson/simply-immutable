@@ -4,8 +4,7 @@ import * as chai from 'chai';
 
 const expect = chai.expect;
 
-type StashOf<T> = { [key: string]: T };
-type Stash = StashOf<any>;
+type Stash<T = any> = { [key: string]: T };
 
 describe('Utils', () => {
   describe('deepFreeze', () => {
@@ -154,7 +153,7 @@ describe('Utils', () => {
 
     it('should deep clone objects into the destination', () => {
       const src = deepFreeze({ foo: { bar: { baz: 1 } } });
-      const newObj = replaceImmutable({} as Stash, [], src);
+      const newObj = replaceImmutable({}, src);
       expect(newObj).to.deep.equal(src);
       expect(newObj).to.not.equal(src);
       expect(newObj.foo).to.not.equal(src.foo);
@@ -164,7 +163,7 @@ describe('Utils', () => {
 
     it('should deep clone arrays into the destination', () => {
       const src = deepFreeze({ foo: [ [1, 2], [3, 4] ] });
-      const newObj = replaceImmutable({} as Stash, [], src);
+      const newObj = replaceImmutable({}, src);
       expect(newObj).to.deep.equal(src);
       expect(newObj).to.not.equal(src);
       expect(newObj.foo).to.not.equal(src.foo);
@@ -214,7 +213,7 @@ describe('Utils', () => {
         d: 'goo',
       });
 
-      const newObj = deepUpdateImmutable(a, [], diff);
+      const newObj = deepUpdateImmutable(a, diff);
       expect(newObj).to.deep.equal(b);
     });
     it('should diff arrays', () => {
@@ -232,7 +231,7 @@ describe('Utils', () => {
       expect(diff.hasOwnProperty(3)).to.equal(false);
       expect(diff.hasOwnProperty(4)).to.equal(true);
 
-      const newArr = deepUpdateImmutable(a, [], diff);
+      const newArr = deepUpdateImmutable(a, diff);
       expect(newArr).to.deep.equal(b);
     });
     it('should diff recursively', () => {
@@ -258,7 +257,7 @@ describe('Utils', () => {
         d: [ undefined, 'modified', undefined, { foo: REMOVE } ],
       });
 
-      const newObj = deepUpdateImmutable(a, [], diff);
+      const newObj = deepUpdateImmutable(a, diff);
       expect(newObj).to.deep.equal(b);
     });
   });

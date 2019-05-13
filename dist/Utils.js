@@ -236,16 +236,22 @@ function normalizePath(path, paramValues) {
     }
     return path;
 }
-function replaceImmutable(root, path, value, ...paramValues) {
-    return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndSet);
+function replaceImmutable(root, ...args) {
+    const path = args.length === 1 ? [] : args.shift();
+    const value = args.shift();
+    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndSet);
 }
 exports.replaceImmutable = replaceImmutable;
-function updateImmutable(root, path, value, ...paramValues) {
-    return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndMerge);
+function updateImmutable(root, ...args) {
+    const path = args.length === 1 ? [] : args.shift();
+    const value = args.shift();
+    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndMerge);
 }
 exports.updateImmutable = updateImmutable;
-function deepUpdateImmutable(root, path, value, ...paramValues) {
-    return modifyImmutableInternal(root, normalizePath(path, paramValues), value, cmpAndDeepMerge);
+function deepUpdateImmutable(root, ...args) {
+    const path = args.length === 1 ? [] : args.shift();
+    const value = args.shift();
+    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndDeepMerge);
 }
 exports.deepUpdateImmutable = deepUpdateImmutable;
 function deleteImmutable(root, path, ...paramValues) {
