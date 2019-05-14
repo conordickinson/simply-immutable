@@ -268,7 +268,7 @@ export function replaceImmutable(root, ...args) {
   return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndSet);
 }
 
-export function updateImmutable<T>(root: Readonly<T>, value: Readonly<Partial<T>>): Readonly<T>;
+export function updateImmutable<T, V>(root: Readonly<T>, value: Readonly<V>): Readonly<T & V>;
 export function updateImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
 export function updateImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
 export function updateImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
@@ -280,7 +280,7 @@ export function updateImmutable(root, ...args) {
   return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndMerge);
 }
 
-export function deepUpdateImmutable<T>(root: Readonly<T>, value: Readonly<Partial<T>>): Readonly<T>;
+export function deepUpdateImmutable<T, V>(root: Readonly<T>, value: Readonly<V>): Readonly<T & V>;
 export function deepUpdateImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
 export function deepUpdateImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
 export function deepUpdateImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
