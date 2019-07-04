@@ -59,7 +59,7 @@ export function isDeepFrozen(o: any) {
   return true;
 }
 
-function shallowClone<T>(o: T): T {
+function shallowCloneObject<T>(o: T): T {
   const out: T = {} as any;
   for (const key in o) {
     out[key] = o[key];
@@ -126,7 +126,7 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
       const newVal = cmpAndSetOrMerge(dst[key], src[key], deepMerge, deepMerge);
       if (newVal !== dst[key]) {
         if (out === dst) {
-          out = shallowClone(dst);
+          out = shallowCloneObject(dst);
         }
         if (newVal === REMOVE) {
           delete out[key];
@@ -141,7 +141,7 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
           continue;
         }
         if (out === dst) {
-          out = shallowClone(dst);
+          out = shallowCloneObject(dst);
         }
         delete out[key];
       }
@@ -219,7 +219,7 @@ function modifyImmutableInternal<T>(root: T, path: Array<string|number>, value: 
       if (parentType === 'array') {
         parent = shallowCloneArray(parent, parent.length);
       } else if (parentType === 'object') {
-        parent = shallowClone(parent);
+        parent = shallowCloneObject(parent);
       }
       if (newVal === REMOVE) {
         if (parentType === 'array') {
@@ -310,11 +310,39 @@ export function cloneImmutable<T>(root: Readonly<T>): Readonly<T> {
     }
     root = gUseFreeze ? Object.freeze(copy) as any : copy;
   } else if (rootType === 'object') {
-    const copy: T = shallowClone(root);
+    const copy: T = shallowCloneObject(root);
     for (const key in copy) {
       copy[key] = cloneImmutable(copy[key]) as any; // cast needed to remove the Readonly<>
     }
     root = gUseFreeze ? Object.freeze(copy) : copy;
+  }
+  return root;
+}
+
+export function cloneMutable<T>(root: Readonly<T>): T {
+  const rootType = getType(root);
+  if (rootType === 'array') {
+    const copy = shallowCloneArray(root, (root as any).length) as any;
+    for (let i = 0; i < copy.length; ++i) {
+      copy[i] = cloneMutable(copy[i]);
+    }
+    root = copy;
+  } else if (rootType === 'object') {
+    const copy: T = shallowCloneObject(root);
+    for (const key in copy) {
+      copy[key] = cloneMutable(copy[key]);
+    }
+    root = copy;
+  }
+  return root;
+}
+
+export function shallowCloneMutable<T>(root: Readonly<T>): T {
+  const rootType = getType(root);
+  if (rootType === 'array') {
+    return shallowCloneArray(root, (root as any).length) as any;
+  } else if (rootType === 'object') {
+    return shallowCloneObject(root);
   }
   return root;
 }

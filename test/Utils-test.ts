@@ -1,4 +1,17 @@
-import { cloneImmutable, deleteImmutable, deepFreeze, deepUpdateImmutable, diffImmutable, filterImmutable, isDeepFrozen, isFrozen, replaceImmutable, REMOVE } from '../lib/Utils';
+import {
+  cloneImmutable,
+  cloneMutable,
+  deleteImmutable,
+  deepFreeze,
+  deepUpdateImmutable,
+  diffImmutable,
+  filterImmutable,
+  isDeepFrozen,
+  isFrozen,
+  replaceImmutable,
+  REMOVE,
+  shallowCloneMutable,
+} from '../lib/Utils';
 
 import * as chai from 'chai';
 
@@ -53,6 +66,58 @@ describe('Utils', () => {
       expect(newArr[1][2]).to.not.equal(arr[1][2]);
       expect(isDeepFrozen(newArr)).to.equal(true);
       expect(isDeepFrozen(arr)).to.equal(false);
+    });
+  });
+
+  describe('cloneMutable', () => {
+    it('should deep clone objects and make them recursively mutable', () => {
+      const obj = deepFreeze({ a: { foo: 'bar' }, b: { foo: { baz: { boz: 17 } } } });
+      const newObj = cloneMutable(obj);
+      expect(newObj).to.deep.equal(obj);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj.a).to.not.equal(obj.a);
+      expect(newObj.b).to.not.equal(obj.b);
+      expect(newObj.b.foo).to.not.equal(obj.b.foo);
+      expect(isDeepFrozen(newObj)).to.equal(false);
+      expect(isDeepFrozen(obj)).to.equal(true);
+    });
+
+    it('should deep clone arrays and make them recursively mutable', () => {
+      const arr = deepFreeze([ 1, [ 2, 3, [4, 5, 6] ] ]);
+      const newArr = cloneMutable(arr);
+      expect(newArr).to.deep.equal(arr);
+      expect(newArr).to.not.equal(arr);
+      expect(newArr[1]).to.not.equal(arr[1]);
+      expect(newArr[1][2]).to.not.equal(arr[1][2]);
+      expect(isDeepFrozen(newArr)).to.equal(false);
+      expect(isDeepFrozen(arr)).to.equal(true);
+    });
+  });
+
+  describe('shallowCloneMutable', () => {
+    it('should deep clone objects and make them mutable', () => {
+      const obj = deepFreeze({ a: { foo: 'bar' }, b: { foo: { baz: { boz: 17 } } } });
+      const newObj = shallowCloneMutable(obj);
+      expect(newObj).to.deep.equal(obj);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj.a).to.equal(obj.a);
+      expect(newObj.b).to.equal(obj.b);
+      expect(newObj.b.foo).to.equal(obj.b.foo);
+      expect(isDeepFrozen(newObj)).to.equal(false);
+      expect(isDeepFrozen(newObj.b)).to.equal(true);
+      expect(isDeepFrozen(obj)).to.equal(true);
+    });
+
+    it('should deep clone arrays and make them mutable', () => {
+      const arr = deepFreeze([ 1, [ 2, 3, [4, 5, 6] ] ]);
+      const newArr = shallowCloneMutable(arr);
+      expect(newArr).to.deep.equal(arr);
+      expect(newArr).to.not.equal(arr);
+      expect(newArr[1]).to.equal(arr[1]);
+      expect(newArr[1][2]).to.equal(arr[1][2]);
+      expect(isDeepFrozen(newArr)).to.equal(false);
+      expect(isDeepFrozen(newArr[1])).to.equal(true);
+      expect(isDeepFrozen(arr)).to.equal(true);
     });
   });
 

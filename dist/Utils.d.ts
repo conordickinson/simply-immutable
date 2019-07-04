@@ -31,6 +31,8 @@ export declare function deleteImmutable<T, V, A>(root: Readonly<T>, pathFunc: (r
 export declare function deleteImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, arg0: A, arg1: B): Readonly<T>;
 export declare function deleteImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, arg0: A, arg1: B, arg2: C): Readonly<T>;
 export declare function cloneImmutable<T>(root: Readonly<T>): Readonly<T>;
+export declare function cloneMutable<T>(root: Readonly<T>): T;
+export declare function shallowCloneMutable<T>(root: Readonly<T>): T;
 export declare function filterImmutable<T>(obj: Readonly<StashOf<T>>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T>>;
 export declare function filterImmutable<T>(arr: Readonly<T[]>, filter: (o: Readonly<T>) => boolean): Readonly<T[]>;
 export declare function deepFreeze<T>(o: T): Readonly<T>;
