@@ -55,7 +55,7 @@ function isDeepFrozen(o) {
     return true;
 }
 exports.isDeepFrozen = isDeepFrozen;
-function shallowClone(o) {
+function shallowCloneObject(o) {
     const out = {};
     for (const key in o) {
         out[key] = o[key];
@@ -119,7 +119,7 @@ function cmpAndSetOrMerge(dst, src, merge, deepMerge) {
             const newVal = cmpAndSetOrMerge(dst[key], src[key], deepMerge, deepMerge);
             if (newVal !== dst[key]) {
                 if (out === dst) {
-                    out = shallowClone(dst);
+                    out = shallowCloneObject(dst);
                 }
                 if (newVal === exports.REMOVE) {
                     delete out[key];
@@ -135,7 +135,7 @@ function cmpAndSetOrMerge(dst, src, merge, deepMerge) {
                     continue;
                 }
                 if (out === dst) {
-                    out = shallowClone(dst);
+                    out = shallowCloneObject(dst);
                 }
                 delete out[key];
             }
@@ -203,7 +203,7 @@ function modifyImmutableInternal(root, path, value, updateFunc) {
                 parent = shallowCloneArray(parent, parent.length);
             }
             else if (parentType === 'object') {
-                parent = shallowClone(parent);
+                parent = shallowCloneObject(parent);
             }
             if (newVal === exports.REMOVE) {
                 if (parentType === 'array') {
@@ -268,7 +268,7 @@ function cloneImmutable(root) {
         root = gUseFreeze ? Object.freeze(copy) : copy;
     }
     else if (rootType === 'object') {
-        const copy = shallowClone(root);
+        const copy = shallowCloneObject(root);
         for (const key in copy) {
             copy[key] = cloneImmutable(copy[key]); // cast needed to remove the Readonly<>
         }
@@ -277,6 +277,36 @@ function cloneImmutable(root) {
     return root;
 }
 exports.cloneImmutable = cloneImmutable;
+function cloneMutable(root) {
+    const rootType = getType(root);
+    if (rootType === 'array') {
+        const copy = shallowCloneArray(root, root.length);
+        for (let i = 0; i < copy.length; ++i) {
+            copy[i] = cloneMutable(copy[i]);
+        }
+        root = copy;
+    }
+    else if (rootType === 'object') {
+        const copy = shallowCloneObject(root);
+        for (const key in copy) {
+            copy[key] = cloneMutable(copy[key]);
+        }
+        root = copy;
+    }
+    return root;
+}
+exports.cloneMutable = cloneMutable;
+function shallowCloneMutable(root) {
+    const rootType = getType(root);
+    if (rootType === 'array') {
+        return shallowCloneArray(root, root.length);
+    }
+    else if (rootType === 'object') {
+        return shallowCloneObject(root);
+    }
+    return root;
+}
+exports.shallowCloneMutable = shallowCloneMutable;
 function filterImmutable(val, filter) {
     let out;
     if (Array.isArray(val)) {

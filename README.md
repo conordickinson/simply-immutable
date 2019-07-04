@@ -7,7 +7,13 @@ Type safety for CRUD operations in TypeScript.
 Immutable in - immutable out: deep clones incoming objects/arrays for safety.
 
 ## cloneImmutable
-Deep clone of an object/array.
+Deep clone of an object/array. Returns a deeply frozen clone.
+
+## cloneMutable
+Deep clone of an object/array. Does not freeze anything in the result, so this is a good way to remove immutability.
+
+## shallowCloneMutable
+Shallow clone of an object/array. First level of the result is not frozen.
 
 ## replaceImmutable
 Replaces object/array fields in the target object/array.
