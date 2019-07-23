@@ -370,18 +370,50 @@ export function shallowCloneMutable<T>(root: Readonly<T>): T {
 export function filterImmutable<T>(obj: Readonly<StashOf<T>>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T>>;
 export function filterImmutable<T>(arr: Readonly<T[]>, filter: (o: Readonly<T>) => boolean): Readonly<T[]>;
 export function filterImmutable<T>(val: Readonly<StashOf<T> | T[]>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T> | T[]> {
+  let changed = false;
   let out;
+
   if (Array.isArray(val)) {
-    out = val.filter(filter) as T[];
+    out = [] as T[];
+    for (const v of val) {
+      if (filter(v)) {
+        out.push(v);
+      } else {
+        changed = true;
+      }
+    }
   } else {
     out = {} as StashOf<T>;
     for (const key in val) {
       if (filter(val[key])) {
         out[key] = val[key];
+      } else {
+        changed = true;
       }
     }
   }
+  if (!changed) {
+    return val;
+  }
   return gUseFreeze ? Object.freeze(out) : out;
+}
+
+export function mapImmutable<T>(obj: Readonly<StashOf<T>>, callback: (val: Readonly<T>, key: string) => T): Readonly<StashOf<T>>;
+export function mapImmutable<T>(arr: Readonly<T[]>, callback: (val: Readonly<T>, idx: number) => T): Readonly<T[]>;
+export function mapImmutable<T>(val: Readonly<StashOf<T> | T[]>, callback: (val: Readonly<T>, key: any) => T): Readonly<StashOf<T> | T[]> {
+  let out;
+  if (Array.isArray(val)) {
+    out = new Array(val.length) as T[];
+    for (let i = 0; i < val.length; ++i) {
+      out[i] = callback(val[i], i);
+    }
+  } else {
+    out = {} as StashOf<T>;
+    for (const key in val) {
+      out[key] = callback(val[key], key);
+    }
+  }
+  return replaceImmutable(val as any, out);
 }
 
 export function deepFreeze<T>(o: T): Readonly<T> {

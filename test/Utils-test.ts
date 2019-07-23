@@ -9,6 +9,7 @@ import {
   filterImmutable,
   isDeepFrozen,
   isFrozen,
+  mapImmutable,
   updateImmutable,
   replaceImmutable,
   REMOVE,
@@ -141,6 +142,28 @@ describe('Utils', () => {
       expect(newArr).to.deep.equal([ { foo: 2 }, { bar: 4 } ]);
       expect(newArr[0]).to.equal(arr[1]);
       expect(newArr[1]).to.equal(arr[4]);
+      expect(isDeepFrozen(newArr)).to.equal(true);
+    });
+  });
+
+  describe('mapImmutable', () => {
+    it('should map objects', () => {
+      const obj = deepFreeze({ a: 1, b: { foo: 2 }, c: 2, d: 3, e: { bar: 4 } });
+      const newObj = mapImmutable(obj as Stash, v => typeof v === 'number' ? v + 1 : v);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ a: 2, b: { foo: 2 }, c: 3, d: 4, e: { bar: 4 } });
+      expect(newObj.b).to.equal(obj.b);
+      expect(newObj.e).to.equal(obj.e);
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should map arrays', () => {
+      const arr = deepFreeze([1, { foo: 2 }, 2, 3, { bar: 4 }]);
+      const newArr = mapImmutable(arr as any[], v => typeof v === 'number' ? v + 1 : v);
+      expect(newArr).to.not.equal(arr);
+      expect(newArr).to.deep.equal([2, { foo: 2 }, 3, 4, { bar: 4 }]);
+      expect(newArr[1]).to.equal(arr[1]);
+      expect(newArr[4]).to.equal(arr[4]);
       expect(isDeepFrozen(newArr)).to.equal(true);
     });
   });

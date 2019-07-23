@@ -317,9 +317,18 @@ function shallowCloneMutable(root) {
 }
 exports.shallowCloneMutable = shallowCloneMutable;
 function filterImmutable(val, filter) {
+    let changed = false;
     let out;
     if (Array.isArray(val)) {
-        out = val.filter(filter);
+        out = [];
+        for (const v of val) {
+            if (filter(v)) {
+                out.push(v);
+            }
+            else {
+                changed = true;
+            }
+        }
     }
     else {
         out = {};
@@ -327,11 +336,34 @@ function filterImmutable(val, filter) {
             if (filter(val[key])) {
                 out[key] = val[key];
             }
+            else {
+                changed = true;
+            }
         }
+    }
+    if (!changed) {
+        return val;
     }
     return gUseFreeze ? Object.freeze(out) : out;
 }
 exports.filterImmutable = filterImmutable;
+function mapImmutable(val, callback) {
+    let out;
+    if (Array.isArray(val)) {
+        out = new Array(val.length);
+        for (let i = 0; i < val.length; ++i) {
+            out[i] = callback(val[i], i);
+        }
+    }
+    else {
+        out = {};
+        for (const key in val) {
+            out[key] = callback(val[key], key);
+        }
+    }
+    return replaceImmutable(val, out);
+}
+exports.mapImmutable = mapImmutable;
 function deepFreeze(o) {
     const type = getType(o);
     if (type === 'object') {

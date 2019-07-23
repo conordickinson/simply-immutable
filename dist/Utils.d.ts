@@ -41,6 +41,8 @@ export declare function cloneMutable<T>(root: Readonly<T>): T;
 export declare function shallowCloneMutable<T>(root: Readonly<T>): T;
 export declare function filterImmutable<T>(obj: Readonly<StashOf<T>>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T>>;
 export declare function filterImmutable<T>(arr: Readonly<T[]>, filter: (o: Readonly<T>) => boolean): Readonly<T[]>;
+export declare function mapImmutable<T>(obj: Readonly<StashOf<T>>, callback: (val: Readonly<T>, key: string) => T): Readonly<StashOf<T>>;
+export declare function mapImmutable<T>(arr: Readonly<T[]>, callback: (val: Readonly<T>, idx: number) => T): Readonly<T[]>;
 export declare function deepFreeze<T>(o: T): Readonly<T>;
 export declare function diffImmutable(oNew: any, oOld: any): undefined | any;
 export {};
