@@ -75,7 +75,11 @@ function shallowCloneArray<T>(a: T, len: number): T {
   return out;
 }
 
-function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean, deepMerge: boolean) {
+function cmpAndSetOrMerge(
+  dst: Readonly<any>, src: Readonly<any>,
+  mergeObjects: boolean, mergeArrays: boolean,
+  deepMergeObjects: boolean, deepMergeArrays: boolean,
+) {
   if (dst === src) {
     return dst;
   }
@@ -92,16 +96,16 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
 
   if (dstType === 'array') {
     let out = dst as any;
-    let desiredLength = merge ? Math.max(src.length, dst.length) : src.length;
+    let desiredLength = mergeArrays ? Math.max(src.length, dst.length) : src.length;
     if (dst.length !== desiredLength) {
       out = shallowCloneArray(dst, desiredLength);
     }
     for (let i = desiredLength - 1; i >= 0; --i) {
-      if (merge && !src.hasOwnProperty(i)) {
+      if (mergeArrays && !src.hasOwnProperty(i)) {
         // merge sparse arrays
         continue;
       }
-      const newVal = cmpAndSetOrMerge(dst[i], src[i], deepMerge, deepMerge);
+      const newVal = cmpAndSetOrMerge(dst[i], src[i], deepMergeObjects, deepMergeArrays, deepMergeObjects, deepMergeArrays);
       if (newVal !== dst[i]) {
         if (out === dst) {
           out = shallowCloneArray(dst, desiredLength);
@@ -123,7 +127,7 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
   if (dstType === 'object') {
     let out = dst as any;
     for (const key in src) {
-      const newVal = cmpAndSetOrMerge(dst[key], src[key], deepMerge, deepMerge);
+      const newVal = cmpAndSetOrMerge(dst[key], src[key], deepMergeObjects, deepMergeArrays, deepMergeObjects, deepMergeArrays);
       if (newVal !== dst[key]) {
         if (out === dst) {
           out = shallowCloneObject(dst);
@@ -135,7 +139,7 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
         }
       }
     }
-    if (!merge) {
+    if (!mergeObjects) {
       for (const key in dst) {
         if (key in src) {
           continue;
@@ -157,15 +161,19 @@ function cmpAndSetOrMerge(dst: Readonly<any>, src: Readonly<any>, merge: boolean
 }
 
 function cmpAndSet(dst: Readonly<any>, src: Readonly<any>) {
-  return cmpAndSetOrMerge(dst, src, false, false);
+  return cmpAndSetOrMerge(dst, src, false, false, false, false);
 }
 
 function cmpAndMerge(dst: Readonly<any>, src: Readonly<any>) {
-  return cmpAndSetOrMerge(dst, src, true, false);
+  return cmpAndSetOrMerge(dst, src, true, true, false, false);
 }
 
 function cmpAndDeepMerge(dst: Readonly<any>, src: Readonly<any>) {
-  return cmpAndSetOrMerge(dst, src, true, true);
+  return cmpAndSetOrMerge(dst, src, true, true, true, false);
+}
+
+function cmpAndApplyDiff(dst: Readonly<any>, src: Readonly<any>) {
+  return cmpAndSetOrMerge(dst, src, true, true, true, true);
 }
 
 type UpdateFunc = (dst: Readonly<any>, src: Readonly<any>) => any;
@@ -290,6 +298,18 @@ export function deepUpdateImmutable(root, ...args) {
   const path = args.length === 1 ? [] : args.shift();
   const value = args.shift();
   return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndDeepMerge);
+}
+
+export function applyDiffImmutable<T, V>(root: Readonly<T>, value: Readonly<V>): Readonly<T & V>;
+export function applyDiffImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: any): Readonly<T>;
+export function applyDiffImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
+export function applyDiffImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
+export function applyDiffImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): Readonly<T>;
+export function applyDiffImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
+export function applyDiffImmutable(root, ...args) {
+  const path = args.length === 1 ? [] : args.shift();
+  const value = args.shift();
+  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndApplyDiff);
 }
 
 export function deleteImmutable<T>(root: Readonly<T>, path: Array<string|number>): Readonly<T>;

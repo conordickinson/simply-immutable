@@ -25,6 +25,12 @@ export declare function deepUpdateImmutable<T, V>(root: Readonly<T>, pathFunc: (
 export declare function deepUpdateImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
 export declare function deepUpdateImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): Readonly<T>;
 export declare function deepUpdateImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
+export declare function applyDiffImmutable<T, V>(root: Readonly<T>, value: Readonly<V>): Readonly<T & V>;
+export declare function applyDiffImmutable<T>(root: Readonly<T>, path: Array<string | number>, value: any): Readonly<T>;
+export declare function applyDiffImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
+export declare function applyDiffImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, value: ValueType<V>, arg0: A): Readonly<T>;
+export declare function applyDiffImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, value: ValueType<V>, arg0: A, arg1: B): Readonly<T>;
+export declare function applyDiffImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, value: ValueType<V>, arg0: A, arg1: B, arg2: C): Readonly<T>;
 export declare function deleteImmutable<T>(root: Readonly<T>, path: Array<string | number>): Readonly<T>;
 export declare function deleteImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V): Readonly<T>;
 export declare function deleteImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A) => V, arg0: A): Readonly<T>;

@@ -69,7 +69,7 @@ function shallowCloneArray(a, len) {
     }
     return out;
 }
-function cmpAndSetOrMerge(dst, src, merge, deepMerge) {
+function cmpAndSetOrMerge(dst, src, mergeObjects, mergeArrays, deepMergeObjects, deepMergeArrays) {
     if (dst === src) {
         return dst;
     }
@@ -85,16 +85,16 @@ function cmpAndSetOrMerge(dst, src, merge, deepMerge) {
     }
     if (dstType === 'array') {
         let out = dst;
-        let desiredLength = merge ? Math.max(src.length, dst.length) : src.length;
+        let desiredLength = mergeArrays ? Math.max(src.length, dst.length) : src.length;
         if (dst.length !== desiredLength) {
             out = shallowCloneArray(dst, desiredLength);
         }
         for (let i = desiredLength - 1; i >= 0; --i) {
-            if (merge && !src.hasOwnProperty(i)) {
+            if (mergeArrays && !src.hasOwnProperty(i)) {
                 // merge sparse arrays
                 continue;
             }
-            const newVal = cmpAndSetOrMerge(dst[i], src[i], deepMerge, deepMerge);
+            const newVal = cmpAndSetOrMerge(dst[i], src[i], deepMergeObjects, deepMergeArrays, deepMergeObjects, deepMergeArrays);
             if (newVal !== dst[i]) {
                 if (out === dst) {
                     out = shallowCloneArray(dst, desiredLength);
@@ -116,7 +116,7 @@ function cmpAndSetOrMerge(dst, src, merge, deepMerge) {
     if (dstType === 'object') {
         let out = dst;
         for (const key in src) {
-            const newVal = cmpAndSetOrMerge(dst[key], src[key], deepMerge, deepMerge);
+            const newVal = cmpAndSetOrMerge(dst[key], src[key], deepMergeObjects, deepMergeArrays, deepMergeObjects, deepMergeArrays);
             if (newVal !== dst[key]) {
                 if (out === dst) {
                     out = shallowCloneObject(dst);
@@ -129,7 +129,7 @@ function cmpAndSetOrMerge(dst, src, merge, deepMerge) {
                 }
             }
         }
-        if (!merge) {
+        if (!mergeObjects) {
             for (const key in dst) {
                 if (key in src) {
                     continue;
@@ -149,13 +149,16 @@ function cmpAndSetOrMerge(dst, src, merge, deepMerge) {
     return src;
 }
 function cmpAndSet(dst, src) {
-    return cmpAndSetOrMerge(dst, src, false, false);
+    return cmpAndSetOrMerge(dst, src, false, false, false, false);
 }
 function cmpAndMerge(dst, src) {
-    return cmpAndSetOrMerge(dst, src, true, false);
+    return cmpAndSetOrMerge(dst, src, true, true, false, false);
 }
 function cmpAndDeepMerge(dst, src) {
-    return cmpAndSetOrMerge(dst, src, true, true);
+    return cmpAndSetOrMerge(dst, src, true, true, true, false);
+}
+function cmpAndApplyDiff(dst, src) {
+    return cmpAndSetOrMerge(dst, src, true, true, true, true);
 }
 function modifyImmutableInternal(root, path, value, updateFunc) {
     const pathLength = path.length;
@@ -254,6 +257,12 @@ function deepUpdateImmutable(root, ...args) {
     return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndDeepMerge);
 }
 exports.deepUpdateImmutable = deepUpdateImmutable;
+function applyDiffImmutable(root, ...args) {
+    const path = args.length === 1 ? [] : args.shift();
+    const value = args.shift();
+    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndApplyDiff);
+}
+exports.applyDiffImmutable = applyDiffImmutable;
 function deleteImmutable(root, path, ...paramValues) {
     return modifyImmutableInternal(root, normalizePath(path, paramValues), exports.REMOVE, cmpAndSet);
 }
