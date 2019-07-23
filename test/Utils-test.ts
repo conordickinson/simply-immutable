@@ -1,4 +1,5 @@
 import {
+  applyDiffImmutable,
   cloneImmutable,
   cloneMutable,
   deleteImmutable,
@@ -8,6 +9,8 @@ import {
   filterImmutable,
   isDeepFrozen,
   isFrozen,
+  mapImmutable,
+  updateImmutable,
   replaceImmutable,
   REMOVE,
   shallowCloneMutable,
@@ -143,6 +146,28 @@ describe('Utils', () => {
     });
   });
 
+  describe('mapImmutable', () => {
+    it('should map objects', () => {
+      const obj = deepFreeze({ a: 1, b: { foo: 2 }, c: 2, d: 3, e: { bar: 4 } });
+      const newObj = mapImmutable(obj as Stash, v => typeof v === 'number' ? v + 1 : v);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ a: 2, b: { foo: 2 }, c: 3, d: 4, e: { bar: 4 } });
+      expect(newObj.b).to.equal(obj.b);
+      expect(newObj.e).to.equal(obj.e);
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should map arrays', () => {
+      const arr = deepFreeze([1, { foo: 2 }, 2, 3, { bar: 4 }]);
+      const newArr = mapImmutable(arr as any[], v => typeof v === 'number' ? v + 1 : v);
+      expect(newArr).to.not.equal(arr);
+      expect(newArr).to.deep.equal([2, { foo: 2 }, 3, 4, { bar: 4 }]);
+      expect(newArr[1]).to.equal(arr[1]);
+      expect(newArr[4]).to.equal(arr[4]);
+      expect(isDeepFrozen(newArr)).to.equal(true);
+    });
+  });
+
   describe('replaceImmutable', () => {
     it('should modify at the root', () => {
       const obj: Stash = deepFreeze({});
@@ -244,7 +269,66 @@ describe('Utils', () => {
       expect(newObj).to.deep.equal({ foo: { a: 1, c: 3 } });
       expect(isDeepFrozen(newObj)).to.equal(true);
     });
+  });
 
+  describe('updateImmutable', () => {
+    it('should merge objects', () => {
+      const obj = deepFreeze({ foo: { a: 1, b: 2, c: 3 } as Stash });
+      const newObj = updateImmutable(obj, o => o.foo, { a: 2, d: 5 });
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: { a: 2, b: 2, c: 3, d: 5 } });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should merge arrays', () => {
+      const obj = deepFreeze({ foo: [1, 2, 3] });
+      const newObj = updateImmutable(obj, o => o.foo, [3, 4]);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: [3, 4, 3] });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should replace below the first level objects', () => {
+      const obj = deepFreeze({ a: { aa: 1 }, b: { bb: 2 } });
+      const newObj = updateImmutable(obj, { b: { bc: 3 } });
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ a: { aa: 1 }, b: { bc: 3 } });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+  });
+
+  describe('deepUpdateImmutable', () => {
+    it('should merge objects', () => {
+      const obj = deepFreeze({ foo: { a: 1, b: 2, c: 3 } as Stash });
+      const newObj = deepUpdateImmutable(obj, o => o.foo, { a: 2, d: 5 });
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: { a: 2, b: 2, c: 3, d: 5 } });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should merge arrays', () => {
+      const obj = deepFreeze({ foo: [1, 2, 3] });
+      const newObj = deepUpdateImmutable(obj, o => o.foo, [3, 4]);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: [3, 4, 3] });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should deep update objects', () => {
+      const obj = deepFreeze({ a: { aa: 1 }, b: { bb: 2 } });
+      const newObj = deepUpdateImmutable(obj, { b: { bc: 3 } });
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ a: { aa: 1 }, b: { bb: 2, bc: 3 } });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should replace deep arrays', () => {
+      const obj = deepFreeze({ a: { aa: 1 }, b: { bb: [1, 2] } });
+      const newObj = deepUpdateImmutable(obj, { b: { bb: [3] } });
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ a: { aa: 1 }, b: { bb: [3] } });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
   });
 
   describe('deleteImmutable', () => {
@@ -278,7 +362,7 @@ describe('Utils', () => {
         d: 'goo',
       });
 
-      const newObj = deepUpdateImmutable(a, diff);
+      const newObj = applyDiffImmutable(a, diff);
       expect(newObj).to.deep.equal(b);
     });
     it('should diff arrays', () => {
@@ -296,7 +380,7 @@ describe('Utils', () => {
       expect(diff.hasOwnProperty(3)).to.equal(false);
       expect(diff.hasOwnProperty(4)).to.equal(true);
 
-      const newArr = deepUpdateImmutable(a, diff);
+      const newArr = applyDiffImmutable(a, diff);
       expect(newArr).to.deep.equal(b);
     });
     it('should diff recursively', () => {
@@ -322,7 +406,7 @@ describe('Utils', () => {
         d: [ undefined, 'modified', undefined, { foo: REMOVE } ],
       });
 
-      const newObj = deepUpdateImmutable(a, diff);
+      const newObj = applyDiffImmutable(a, diff);
       expect(newObj).to.deep.equal(b);
     });
   });
