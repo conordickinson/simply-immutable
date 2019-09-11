@@ -160,7 +160,29 @@ function cmpAndDeepMerge(dst, src) {
 function cmpAndApplyDiff(dst, src) {
     return cmpAndSetOrMerge(dst, src, true, true, true, true);
 }
-function modifyImmutableInternal(root, path, value, updateFunc) {
+function incrementNumber(dst, src) {
+    if (typeof dst !== 'number') {
+        return src;
+    }
+    return dst + src;
+}
+function arrayConcat(dst, src) {
+    src = cloneImmutable(src);
+    if (!Array.isArray(dst)) {
+        return src;
+    }
+    const out = dst.concat(src);
+    return gUseFreeze ? Object.freeze(out) : out;
+}
+function arraySplice(dst, src, params) {
+    src = cloneImmutable(src);
+    if (!Array.isArray(dst)) {
+        return src;
+    }
+    const out = dst.slice(0, params.index).concat(src).concat(dst.slice(params.index + params.deleteCount));
+    return gUseFreeze ? Object.freeze(out) : out;
+}
+function modifyImmutableInternal(root, path, value, updateFunc, updateParam) {
     const pathLength = path.length;
     const parents = new Array(pathLength);
     const parentTypes = [];
@@ -195,7 +217,7 @@ function modifyImmutableInternal(root, path, value, updateFunc) {
     if (typeof value === 'function') {
         value = value(leafVal);
     }
-    let newVal = value === exports.REMOVE ? value : updateFunc(leafVal, value);
+    let newVal = value === exports.REMOVE ? value : updateFunc(leafVal, value, updateParam);
     // walk back up the object path, cloning as needed
     for (let i = pathLength - 1; i >= 0; --i) {
         let parent = parents[i];
@@ -242,31 +264,47 @@ function normalizePath(path, paramValues) {
 function replaceImmutable(root, ...args) {
     const path = args.length === 1 ? [] : args.shift();
     const value = args.shift();
-    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndSet);
+    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndSet, undefined);
 }
 exports.replaceImmutable = replaceImmutable;
 function updateImmutable(root, ...args) {
     const path = args.length === 1 ? [] : args.shift();
     const value = args.shift();
-    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndMerge);
+    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndMerge, undefined);
 }
 exports.updateImmutable = updateImmutable;
 function deepUpdateImmutable(root, ...args) {
     const path = args.length === 1 ? [] : args.shift();
     const value = args.shift();
-    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndDeepMerge);
+    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndDeepMerge, undefined);
 }
 exports.deepUpdateImmutable = deepUpdateImmutable;
 function applyDiffImmutable(root, ...args) {
     const path = args.length === 1 ? [] : args.shift();
     const value = args.shift();
-    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndApplyDiff);
+    return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndApplyDiff, undefined);
 }
 exports.applyDiffImmutable = applyDiffImmutable;
 function deleteImmutable(root, path, ...paramValues) {
-    return modifyImmutableInternal(root, normalizePath(path, paramValues), exports.REMOVE, cmpAndSet);
+    return modifyImmutableInternal(root, normalizePath(path, paramValues), exports.REMOVE, cmpAndSet, undefined);
 }
 exports.deleteImmutable = deleteImmutable;
+function incrementImmutable(root, path, value) {
+    return modifyImmutableInternal(root, path, value, incrementNumber, undefined);
+}
+exports.incrementImmutable = incrementImmutable;
+function arrayConcatImmutable(root, path, values) {
+    return modifyImmutableInternal(root, path, values, arrayConcat, undefined);
+}
+exports.arrayConcatImmutable = arrayConcatImmutable;
+function arrayPushImmutable(root, path, ...values) {
+    return modifyImmutableInternal(root, path, values, arrayConcat, undefined);
+}
+exports.arrayPushImmutable = arrayPushImmutable;
+function arraySpliceImmutable(root, path, index, deleteCount, ...values) {
+    return modifyImmutableInternal(root, path, values, arraySplice, { index, deleteCount });
+}
+exports.arraySpliceImmutable = arraySpliceImmutable;
 function cloneImmutable(root) {
     const rootType = getType(root);
     if (rootType === 'array') {

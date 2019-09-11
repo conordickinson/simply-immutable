@@ -176,9 +176,34 @@ function cmpAndApplyDiff(dst: Readonly<any>, src: Readonly<any>) {
   return cmpAndSetOrMerge(dst, src, true, true, true, true);
 }
 
-type UpdateFunc = (dst: Readonly<any>, src: Readonly<any>) => any;
+function incrementNumber(dst: Readonly<any>, src: Readonly<any>) {
+  if (typeof dst !== 'number') {
+    return src;
+  }
+  return dst + (src as unknown as number);
+}
 
-function modifyImmutableInternal<T>(root: T, path: Array<string|number>, value: any, updateFunc: UpdateFunc): T {
+function arrayConcat(dst: Readonly<any>, src: Readonly<any>) {
+  src = cloneImmutable(src);
+  if (!Array.isArray(dst)) {
+    return src;
+  }
+  const out = dst.concat(src);
+  return gUseFreeze ? Object.freeze(out) : out;
+}
+
+function arraySplice(dst: Readonly<any>, src: Readonly<any>, params: { index: number, deleteCount: number }) {
+  src = cloneImmutable(src);
+  if (!Array.isArray(dst)) {
+    return src;
+  }
+  const out = dst.slice(0, params.index).concat(src).concat(dst.slice(params.index + params.deleteCount));
+  return gUseFreeze ? Object.freeze(out) : out;
+}
+
+type UpdateFunc<P> = (dst: Readonly<any>, src: Readonly<any>, param: P) => any;
+
+function modifyImmutableInternal<T, P>(root: T, path: Array<string|number>, value: any, updateFunc: UpdateFunc<P>, updateParam: P): T {
   const pathLength = path.length;
   const parents: any[] = new Array(pathLength);
   const parentTypes: string[] = [];
@@ -215,7 +240,7 @@ function modifyImmutableInternal<T>(root: T, path: Array<string|number>, value: 
   if (typeof value === 'function') {
     value = value(leafVal);
   }
-  let newVal = value === REMOVE ? value : updateFunc(leafVal, value);
+  let newVal = value === REMOVE ? value : updateFunc(leafVal, value, updateParam);
 
   // walk back up the object path, cloning as needed
   for (let i = pathLength - 1; i >= 0; --i) {
@@ -273,7 +298,7 @@ export function replaceImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (ro
 export function replaceImmutable(root, ...args) {
   const path = args.length === 1 ? [] : args.shift();
   const value = args.shift();
-  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndSet);
+  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndSet, undefined);
 }
 
 export function updateImmutable<T, V>(root: Readonly<T>, value: Readonly<V>): Readonly<T & V>;
@@ -285,7 +310,7 @@ export function updateImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (roo
 export function updateImmutable(root, ...args) {
   const path = args.length === 1 ? [] : args.shift();
   const value = args.shift();
-  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndMerge);
+  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndMerge, undefined);
 }
 
 export function deepUpdateImmutable<T, V>(root: Readonly<T>, value: Readonly<V>): Readonly<T & V>;
@@ -297,7 +322,7 @@ export function deepUpdateImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: 
 export function deepUpdateImmutable(root, ...args) {
   const path = args.length === 1 ? [] : args.shift();
   const value = args.shift();
-  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndDeepMerge);
+  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndDeepMerge, undefined);
 }
 
 export function applyDiffImmutable<T, V>(root: Readonly<T>, value: Readonly<V>): Readonly<T & V>;
@@ -309,7 +334,7 @@ export function applyDiffImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (
 export function applyDiffImmutable(root, ...args) {
   const path = args.length === 1 ? [] : args.shift();
   const value = args.shift();
-  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndApplyDiff);
+  return modifyImmutableInternal(root, normalizePath(path, args), value, cmpAndApplyDiff, undefined);
 }
 
 export function deleteImmutable<T>(root: Readonly<T>, path: Array<string|number>): Readonly<T>;
@@ -318,7 +343,23 @@ export function deleteImmutable<T, V, A>(root: Readonly<T>, pathFunc: (root: Rea
 export function deleteImmutable<T, V, A, B>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B) => V, arg0: A, arg1: B): Readonly<T>;
 export function deleteImmutable<T, V, A, B, C>(root: Readonly<T>, pathFunc: (root: Readonly<T>, arg0: A, arg1: B, arg2: C) => V, arg0: A, arg1: B, arg2: C): Readonly<T>;
 export function deleteImmutable(root, path, ...paramValues) {
-  return modifyImmutableInternal(root, normalizePath(path, paramValues), REMOVE, cmpAndSet);
+  return modifyImmutableInternal(root, normalizePath(path, paramValues), REMOVE, cmpAndSet, undefined);
+}
+
+export function incrementImmutable<T>(root: Readonly<T>, path: Array<string|number>, value: number): Readonly<T> {
+  return modifyImmutableInternal(root, path, value, incrementNumber, undefined);
+}
+
+export function arrayConcatImmutable<T>(root: Readonly<T>, path: Array<string|number>, values: any[]): Readonly<T> {
+  return modifyImmutableInternal(root, path, values, arrayConcat, undefined);
+}
+
+export function arrayPushImmutable<T>(root: Readonly<T>, path: Array<string|number>, ...values: any[]): Readonly<T> {
+  return modifyImmutableInternal(root, path, values, arrayConcat, undefined);
+}
+
+export function arraySpliceImmutable<T>(root: Readonly<T>, path: Array<string|number>, index: number, deleteCount: number, ...values: any): Readonly<T> {
+  return modifyImmutableInternal(root, path, values, arraySplice, { index, deleteCount });
 }
 
 export function cloneImmutable<T>(root: Readonly<T>): Readonly<T> {
