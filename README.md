@@ -33,6 +33,22 @@ Creates intermediate objects/arrays as necessary.
 ## deleteImmutable
 Removes target field.
 
+## incrementImmutable
+Adds to an existing numeric value. If the target value is not a number then it is treated as 0.
+`obj = incrementImmutable(obj, ['foo', 'count'], 1);`
+
+## arrayPushImmutable
+Adds new values to the end of an array. If the target is not an array then it will be replaced by a new array with only the new values in it.
+`obj = arrayPushImmutable(obj, ['foo', 'vals'], 'newVal1', 'newVal2');`
+
+## arrayConcatImmutable
+Adds an array of new values to the end of an array. If the target is not an array then it will be replaced by a new array with only the new values in it.
+`obj = arrayConcatImmutable(obj, ['foo', 'vals'], ['newVal1', 'newVal2']);`
+
+## arraySpliceImmutable
+Works just like Array.splice(). If the target is not an array then it will be replaced by a new array with only the new values in it. This function is much preferable to replaceImmutable for arrays when the change operations are known, because replaceImmutable diffs by array index so a deleted or inserted value will break diffing. arraySpliceImmutable does not have this problem.
+`obj = arraySpliceImmutable(obj, ['foo', 'vals'], 3, 1, 'insertedVal');`
+
 ## diffImmutable
 Given two objects/arrays, generates a diff that can be applied to the second parameter (using applyDiffImmutable) to get the first parameter.
 

@@ -1,19 +1,23 @@
 import {
   applyDiffImmutable,
+  arrayConcatImmutable,
+  arrayPushImmutable,
+  arraySpliceImmutable,
   cloneImmutable,
   cloneMutable,
-  deleteImmutable,
   deepFreeze,
   deepUpdateImmutable,
+  deleteImmutable,
   diffImmutable,
   filterImmutable,
+  incrementImmutable,
   isDeepFrozen,
   isFrozen,
   mapImmutable,
-  updateImmutable,
-  replaceImmutable,
   REMOVE,
+  replaceImmutable,
   shallowCloneMutable,
+  updateImmutable,
 } from '../lib/Utils';
 
 import * as chai from 'chai';
@@ -345,6 +349,82 @@ describe('Utils', () => {
       const newObj = deleteImmutable(obj, o => o.foo[1]);
       expect(newObj).to.not.equal(obj);
       expect(newObj).to.deep.equal({ foo: [1, 3] });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+  });
+
+  describe('incrementImmutable', () => {
+    it('should add to an existing value', () => {
+      const obj = deepFreeze({ foo: { a: 1, b: 2, c: 3 } as Stash });
+      const newObj = incrementImmutable(obj, ['foo', 'a'], 3);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: { a: 4, b: 2, c: 3 } });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should set a non-existent value', () => {
+      const obj = deepFreeze({ foo: { a: 1, b: 2, c: 3 } as Stash });
+      const newObj = incrementImmutable(obj, ['foo', 'd'], 3);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: { a: 1, b: 2, c: 3, d: 3 } });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+  });
+
+  describe('arrayPushImmutable', () => {
+    it('should push onto an existing array', () => {
+      const obj = deepFreeze({ foo: [ {a: 1}, {a: 2}, {a: 3} ]});
+      const newObj = arrayPushImmutable(obj, ['foo'], {a: 4});
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: [ {a: 1}, {a: 2}, {a: 3}, {a: 4} ] });
+      expect(newObj.foo[0]).to.equal(obj.foo[0]);
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should create an array', () => {
+      const obj = deepFreeze({});
+      const newObj = arrayPushImmutable(obj, ['foo'], { a: 4 });
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: [ {a: 4} ] });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+  });
+
+  describe('arrayConcatImmutable', () => {
+    it('should concat onto an existing array', () => {
+      const obj = deepFreeze({ foo: [ {a: 1}, {a: 2}, {a: 3} ]});
+      const newObj = arrayConcatImmutable(obj, ['foo'], [{a: 4}, {a: 5}]);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: [ {a: 1}, {a: 2}, {a: 3}, {a: 4}, {a: 5} ] });
+      expect(newObj.foo[0]).to.equal(obj.foo[0]);
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should create an array', () => {
+      const obj = deepFreeze({});
+      const newObj = arrayConcatImmutable(obj, ['foo'], [{a: 4}, {a: 5}]);
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: [ {a: 4}, {a: 5} ] });
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+  });
+
+  describe('arraySpliceImmutable', () => {
+    it('should splice into an existing array', () => {
+      const obj = deepFreeze({ foo: [ {a: 1}, {a: 2}, {a: 3} ]});
+      const newObj = arraySpliceImmutable(obj, ['foo'], 1, 1, {a: 4}, {a: 5});
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: [ {a: 1}, {a: 4}, {a: 5}, {a: 3} ] });
+      expect(newObj.foo[0]).to.equal(obj.foo[0]);
+      expect(newObj.foo[3]).to.equal(obj.foo[2]);
+      expect(isDeepFrozen(newObj)).to.equal(true);
+    });
+
+    it('should create an array', () => {
+      const obj = deepFreeze({});
+      const newObj = arraySpliceImmutable(obj, ['foo'], 1, 1, {a: 4 });
+      expect(newObj).to.not.equal(obj);
+      expect(newObj).to.deep.equal({ foo: [ {a: 4} ] });
       expect(isDeepFrozen(newObj)).to.equal(true);
     });
   });
