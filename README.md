@@ -41,12 +41,30 @@ Adds to an existing numeric value. If the target value is not a number then it i
 Adds new values to the end of an array. If the target is not an array then it will be replaced by a new array with only the new values in it.
 `obj = arrayPushImmutable(obj, ['foo', 'vals'], 'newVal1', 'newVal2');`
 
+## arrayPopImmutable
+Removes the last value from the end of an array. If the target is not an array then it will be replaced by an empty array.
+`obj = arrayPopImmutable(obj, ['foo', 'vals']);`
+
+## arrayUnshiftImmutable
+Adds new values to the front of an array. If the target is not an array then it will be replaced by a new array with only the new values in it.
+`obj = arrayUnshiftImmutable(obj, ['foo', 'vals'], 'newVal1', 'newVal2');`
+
+## arrayShiftImmutable
+Removes the first value from the front of an array. If the target is not an array then it will be replaced by an empty array.
+`obj = arrayShiftImmutable(obj, ['foo', 'vals']);`
+
 ## arrayConcatImmutable
 Adds an array of new values to the end of an array. If the target is not an array then it will be replaced by a new array with only the new values in it.
 `obj = arrayConcatImmutable(obj, ['foo', 'vals'], ['newVal1', 'newVal2']);`
 
+## arraySliceImmutable
+Works just like Array.slice(). If the target is not an array then it will be replaced by an empty array.
+`obj = arraySliceImmutable(obj, ['foo', 'vals'], 2, -1);`
+`obj = arraySliceImmutable(obj, ['foo', 'vals'], 1);`
+
 ## arraySpliceImmutable
-Works just like Array.splice(). If the target is not an array then it will be replaced by a new array with only the new values in it. This function is much preferable to replaceImmutable for arrays when the change operations are known, because replaceImmutable diffs by array index so a deleted or inserted value will break diffing. arraySpliceImmutable does not have this problem.
+Works just like Array.splice(). If the target is not an array then it will be replaced by a new array with only the new values in it. If the target is not an array then it will be replaced by an empty array.
+This function is much preferable to replaceImmutable for arrays when the change operations are known, because replaceImmutable diffs by array index so a deleted or inserted value will break diffing. arraySpliceImmutable does not have this problem.
 `obj = arraySpliceImmutable(obj, ['foo', 'vals'], 3, 1, 'insertedVal');`
 
 ## diffImmutable
