@@ -183,12 +183,17 @@ function incrementNumber(dst: Readonly<any>, src: Readonly<any>) {
   return dst + (src as unknown as number);
 }
 
-function arrayConcat(dst: Readonly<any>, src: Readonly<any>) {
+function arrayJoin(dst: Readonly<any>, src: Readonly<any>, atFront: boolean) {
   src = cloneImmutable(src);
   if (!Array.isArray(dst)) {
     return src;
   }
-  const out = dst.concat(src);
+  const out = atFront ? src.concat(dst) : dst.concat(src);
+  return gUseFreeze ? Object.freeze(out) : out;
+}
+
+function arraySlice(dst: Readonly<any>, _src: Readonly<any>, params: { start: number, end: number | undefined }) {
+  const out = Array.isArray(dst) ? dst.slice(params.start, params.end) : [];
   return gUseFreeze ? Object.freeze(out) : out;
 }
 
@@ -351,11 +356,27 @@ export function incrementImmutable<T>(root: Readonly<T>, path: Array<string|numb
 }
 
 export function arrayConcatImmutable<T>(root: Readonly<T>, path: Array<string|number>, values: any[]): Readonly<T> {
-  return modifyImmutableInternal(root, path, values, arrayConcat, undefined);
+  return modifyImmutableInternal(root, path, values, arrayJoin, false);
 }
 
 export function arrayPushImmutable<T>(root: Readonly<T>, path: Array<string|number>, ...values: any[]): Readonly<T> {
-  return modifyImmutableInternal(root, path, values, arrayConcat, undefined);
+  return modifyImmutableInternal(root, path, values, arrayJoin, false);
+}
+
+export function arrayPopImmutable<T>(root: Readonly<T>, path: Array<string|number>): Readonly<T> {
+  return modifyImmutableInternal(root, path, null, arraySlice, { start: 0, end: -1 });
+}
+
+export function arrayShiftImmutable<T>(root: Readonly<T>, path: Array<string|number>): Readonly<T> {
+  return modifyImmutableInternal(root, path, null, arraySlice, { start: 1, end: undefined });
+}
+
+export function arrayUnshiftImmutable<T>(root: Readonly<T>, path: Array<string|number>, ...values: any[]): Readonly<T> {
+  return modifyImmutableInternal(root, path, values, arrayJoin, true);
+}
+
+export function arraySliceImmutable<T>(root: Readonly<T>, path: Array<string|number>, start: number, end?: number): Readonly<T> {
+  return modifyImmutableInternal(root, path, null, arraySlice, { start, end });
 }
 
 export function arraySpliceImmutable<T>(root: Readonly<T>, path: Array<string|number>, index: number, deleteCount: number, ...values: any): Readonly<T> {

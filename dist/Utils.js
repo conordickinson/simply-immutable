@@ -166,12 +166,16 @@ function incrementNumber(dst, src) {
     }
     return dst + src;
 }
-function arrayConcat(dst, src) {
+function arrayJoin(dst, src, atFront) {
     src = cloneImmutable(src);
     if (!Array.isArray(dst)) {
         return src;
     }
-    const out = dst.concat(src);
+    const out = atFront ? src.concat(dst) : dst.concat(src);
+    return gUseFreeze ? Object.freeze(out) : out;
+}
+function arraySlice(dst, _src, params) {
+    const out = Array.isArray(dst) ? dst.slice(params.start, params.end) : [];
     return gUseFreeze ? Object.freeze(out) : out;
 }
 function arraySplice(dst, src, params) {
@@ -294,13 +298,29 @@ function incrementImmutable(root, path, value) {
 }
 exports.incrementImmutable = incrementImmutable;
 function arrayConcatImmutable(root, path, values) {
-    return modifyImmutableInternal(root, path, values, arrayConcat, undefined);
+    return modifyImmutableInternal(root, path, values, arrayJoin, false);
 }
 exports.arrayConcatImmutable = arrayConcatImmutable;
 function arrayPushImmutable(root, path, ...values) {
-    return modifyImmutableInternal(root, path, values, arrayConcat, undefined);
+    return modifyImmutableInternal(root, path, values, arrayJoin, false);
 }
 exports.arrayPushImmutable = arrayPushImmutable;
+function arrayPopImmutable(root, path) {
+    return modifyImmutableInternal(root, path, null, arraySlice, { start: 0, end: -1 });
+}
+exports.arrayPopImmutable = arrayPopImmutable;
+function arrayShiftImmutable(root, path) {
+    return modifyImmutableInternal(root, path, null, arraySlice, { start: 1, end: undefined });
+}
+exports.arrayShiftImmutable = arrayShiftImmutable;
+function arrayUnshiftImmutable(root, path, ...values) {
+    return modifyImmutableInternal(root, path, values, arrayJoin, true);
+}
+exports.arrayUnshiftImmutable = arrayUnshiftImmutable;
+function arraySliceImmutable(root, path, start, end) {
+    return modifyImmutableInternal(root, path, null, arraySlice, { start, end });
+}
+exports.arraySliceImmutable = arraySliceImmutable;
 function arraySpliceImmutable(root, path, index, deleteCount, ...values) {
     return modifyImmutableInternal(root, path, values, arraySplice, { index, deleteCount });
 }

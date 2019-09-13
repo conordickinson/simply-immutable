@@ -39,6 +39,10 @@ export declare function deleteImmutable<T, V, A, B, C>(root: Readonly<T>, pathFu
 export declare function incrementImmutable<T>(root: Readonly<T>, path: Array<string | number>, value: number): Readonly<T>;
 export declare function arrayConcatImmutable<T>(root: Readonly<T>, path: Array<string | number>, values: any[]): Readonly<T>;
 export declare function arrayPushImmutable<T>(root: Readonly<T>, path: Array<string | number>, ...values: any[]): Readonly<T>;
+export declare function arrayPopImmutable<T>(root: Readonly<T>, path: Array<string | number>): Readonly<T>;
+export declare function arrayShiftImmutable<T>(root: Readonly<T>, path: Array<string | number>): Readonly<T>;
+export declare function arrayUnshiftImmutable<T>(root: Readonly<T>, path: Array<string | number>, ...values: any[]): Readonly<T>;
+export declare function arraySliceImmutable<T>(root: Readonly<T>, path: Array<string | number>, start: number, end?: number): Readonly<T>;
 export declare function arraySpliceImmutable<T>(root: Readonly<T>, path: Array<string | number>, index: number, deleteCount: number, ...values: any): Readonly<T>;
 export declare function cloneImmutable<T>(root: Readonly<T>): Readonly<T>;
 export declare function cloneMutable<T>(root: Readonly<T>): T;
