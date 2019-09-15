@@ -1,12 +1,10 @@
-declare type StashOf<T> = {
+declare type Stash<T = any> = {
     [key: string]: T;
 };
-export declare const REMOVE: unique symbol;
+export { cloneImmutable, cloneMutable, freezeImmutableStructures, REMOVE, shallowCloneMutable } from './Core';
+export { isDeepFrozen, isFrozen } from './Helpers';
 declare type ValueSetter<V> = (v: Readonly<V>) => Readonly<V>;
 declare type ValueType<V> = V | ValueSetter<V>;
-export declare function freezeImmutableStructures(useFreeze: boolean): void;
-export declare function isFrozen(o: any): boolean;
-export declare function isDeepFrozen(o: any): boolean;
 export declare function replaceImmutable<T, V extends T>(root: Readonly<T>, value: V): Readonly<T & V>;
 export declare function replaceImmutable<T>(root: Readonly<T>, path: Array<string | number>, value: any): Readonly<T>;
 export declare function replaceImmutable<T, V>(root: Readonly<T>, pathFunc: (root: Readonly<T>) => V, value: ValueType<V>): Readonly<T>;
@@ -44,13 +42,9 @@ export declare function arrayShiftImmutable<T>(root: Readonly<T>, path: Array<st
 export declare function arrayUnshiftImmutable<T>(root: Readonly<T>, path: Array<string | number>, ...values: any[]): Readonly<T>;
 export declare function arraySliceImmutable<T>(root: Readonly<T>, path: Array<string | number>, start: number, end?: number): Readonly<T>;
 export declare function arraySpliceImmutable<T>(root: Readonly<T>, path: Array<string | number>, index: number, deleteCount: number, ...values: any): Readonly<T>;
-export declare function cloneImmutable<T>(root: Readonly<T>): Readonly<T>;
-export declare function cloneMutable<T>(root: Readonly<T>): T;
-export declare function shallowCloneMutable<T>(root: Readonly<T>): T;
-export declare function filterImmutable<T>(obj: Readonly<StashOf<T>>, filter: (o: Readonly<T>) => boolean): Readonly<StashOf<T>>;
+export declare function filterImmutable<T>(obj: Readonly<Stash<T>>, filter: (o: Readonly<T>) => boolean): Readonly<Stash<T>>;
 export declare function filterImmutable<T>(arr: Readonly<T[]>, filter: (o: Readonly<T>) => boolean): Readonly<T[]>;
-export declare function mapImmutable<T>(obj: Readonly<StashOf<T>>, callback: (val: Readonly<T>, key: string) => T): Readonly<StashOf<T>>;
+export declare function mapImmutable<T>(obj: Readonly<Stash<T>>, callback: (val: Readonly<T>, key: string) => T): Readonly<Stash<T>>;
 export declare function mapImmutable<T>(arr: Readonly<T[]>, callback: (val: Readonly<T>, idx: number) => T): Readonly<T[]>;
 export declare function deepFreeze<T>(o: T): Readonly<T>;
 export declare function diffImmutable(oNew: any, oOld: any): undefined | any;
-export {};
