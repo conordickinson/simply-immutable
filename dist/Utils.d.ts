@@ -1,6 +1,7 @@
 declare type Stash<T = any> = {
     [key: string]: T;
 };
+import { ModifyContext } from './ModifyContext';
 export { cloneImmutable, cloneMutable, freezeImmutableStructures, REMOVE, shallowCloneMutable } from './Core';
 export { isDeepFrozen, isFrozen } from './Helpers';
 declare type ValueSetter<V> = (v: Readonly<V>) => Readonly<V>;
@@ -48,3 +49,4 @@ export declare function mapImmutable<T>(obj: Readonly<Stash<T>>, callback: (val:
 export declare function mapImmutable<T>(arr: Readonly<T[]>, callback: (val: Readonly<T>, idx: number) => T): Readonly<T[]>;
 export declare function deepFreeze<T>(o: T): Readonly<T>;
 export declare function diffImmutable(oNew: any, oOld: any): undefined | any;
+export declare function modifyMultiImmutable<T>(root: Readonly<T>, isMutable?: boolean): ModifyContext<T>;

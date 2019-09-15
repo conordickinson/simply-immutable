@@ -12,6 +12,9 @@ export function freezeIfEnabled<T>(o: T): T {
   return gUseFreeze ? Object.freeze(o) : o;
 }
 
+export function isFreezeEnabled() {
+  return gUseFreeze;
+}
 
 function cmpAndSetOrMerge(
   dst: Readonly<any>, src: Readonly<any>,
@@ -146,7 +149,14 @@ export function arraySplice(dst: Readonly<any>, src: Readonly<any>, params: { in
 
 type UpdateFunc<P> = (dst: Readonly<any>, src: Readonly<any>, param: P) => any;
 
-export function modifyImmutableInternal<T, P>(root: T, path: Array<string|number>, value: any, updateFunc: UpdateFunc<P>, updateParam: P): T {
+export function modifyImmutableInternal<T, P>(
+  _immutableRoot: T|undefined,
+  root: T,
+  path: Array<string|number>,
+  value: any,
+  updateFunc: UpdateFunc<P>,
+  updateParam: P,
+): T {
   const pathLength = path.length;
   const parents: any[] = new Array(pathLength);
   const parentTypes: string[] = [];

@@ -1,6 +1,7 @@
 export declare const REMOVE: unique symbol;
 export declare function freezeImmutableStructures(useFreeze: boolean): void;
 export declare function freezeIfEnabled<T>(o: T): T;
+export declare function isFreezeEnabled(): boolean;
 export declare function cmpAndSet(dst: Readonly<any>, src: Readonly<any>): any;
 export declare function cmpAndMerge(dst: Readonly<any>, src: Readonly<any>): any;
 export declare function cmpAndDeepMerge(dst: Readonly<any>, src: Readonly<any>): any;
@@ -16,7 +17,7 @@ export declare function arraySplice(dst: Readonly<any>, src: Readonly<any>, para
     deleteCount: number;
 }): Readonly<any>;
 declare type UpdateFunc<P> = (dst: Readonly<any>, src: Readonly<any>, param: P) => any;
-export declare function modifyImmutableInternal<T, P>(root: T, path: Array<string | number>, value: any, updateFunc: UpdateFunc<P>, updateParam: P): T;
+export declare function modifyImmutableInternal<T, P>(_immutableRoot: T | undefined, root: T, path: Array<string | number>, value: any, updateFunc: UpdateFunc<P>, updateParam: P): T;
 export declare function cloneImmutable<T>(root: Readonly<T>): Readonly<T>;
 export declare function cloneMutable<T>(root: Readonly<T>): T;
 export declare function shallowCloneMutable<T>(root: Readonly<T>): T;

@@ -11,6 +11,10 @@ function freezeIfEnabled(o) {
     return gUseFreeze ? Object.freeze(o) : o;
 }
 exports.freezeIfEnabled = freezeIfEnabled;
+function isFreezeEnabled() {
+    return gUseFreeze;
+}
+exports.isFreezeEnabled = isFreezeEnabled;
 function cmpAndSetOrMerge(dst, src, mergeObjects, mergeArrays, deepMergeObjects, deepMergeArrays) {
     if (dst === src) {
         return dst;
@@ -136,7 +140,7 @@ function arraySplice(dst, src, params) {
     return gUseFreeze ? Object.freeze(out) : out;
 }
 exports.arraySplice = arraySplice;
-function modifyImmutableInternal(root, path, value, updateFunc, updateParam) {
+function modifyImmutableInternal(_immutableRoot, root, path, value, updateFunc, updateParam) {
     const pathLength = path.length;
     const parents = new Array(pathLength);
     const parentTypes = [];

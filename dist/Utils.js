@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const FunctionParse_1 = require("./FunctionParse");
 const Helpers_1 = require("./Helpers");
 const Core_1 = require("./Core");
+const ModifyContext_1 = require("./ModifyContext");
 var Core_2 = require("./Core");
 exports.cloneImmutable = Core_2.cloneImmutable;
 exports.cloneMutable = Core_2.cloneMutable;
@@ -27,61 +28,61 @@ function normalizePath(path, paramValues) {
 function replaceImmutable(root, ...args) {
     const path = args.length === 1 ? [] : args.shift();
     const value = args.shift();
-    return Core_1.modifyImmutableInternal(root, normalizePath(path, args), value, Core_1.cmpAndSet, undefined);
+    return Core_1.modifyImmutableInternal(root, root, normalizePath(path, args), value, Core_1.cmpAndSet, undefined);
 }
 exports.replaceImmutable = replaceImmutable;
 function updateImmutable(root, ...args) {
     const path = args.length === 1 ? [] : args.shift();
     const value = args.shift();
-    return Core_1.modifyImmutableInternal(root, normalizePath(path, args), value, Core_1.cmpAndMerge, undefined);
+    return Core_1.modifyImmutableInternal(root, root, normalizePath(path, args), value, Core_1.cmpAndMerge, undefined);
 }
 exports.updateImmutable = updateImmutable;
 function deepUpdateImmutable(root, ...args) {
     const path = args.length === 1 ? [] : args.shift();
     const value = args.shift();
-    return Core_1.modifyImmutableInternal(root, normalizePath(path, args), value, Core_1.cmpAndDeepMerge, undefined);
+    return Core_1.modifyImmutableInternal(root, root, normalizePath(path, args), value, Core_1.cmpAndDeepMerge, undefined);
 }
 exports.deepUpdateImmutable = deepUpdateImmutable;
 function applyDiffImmutable(root, ...args) {
     const path = args.length === 1 ? [] : args.shift();
     const value = args.shift();
-    return Core_1.modifyImmutableInternal(root, normalizePath(path, args), value, Core_1.cmpAndApplyDiff, undefined);
+    return Core_1.modifyImmutableInternal(root, root, normalizePath(path, args), value, Core_1.cmpAndApplyDiff, undefined);
 }
 exports.applyDiffImmutable = applyDiffImmutable;
 function deleteImmutable(root, path, ...paramValues) {
-    return Core_1.modifyImmutableInternal(root, normalizePath(path, paramValues), Core_1.REMOVE, Core_1.cmpAndSet, undefined);
+    return Core_1.modifyImmutableInternal(root, root, normalizePath(path, paramValues), Core_1.REMOVE, Core_1.cmpAndSet, undefined);
 }
 exports.deleteImmutable = deleteImmutable;
 function incrementImmutable(root, path, value) {
-    return Core_1.modifyImmutableInternal(root, path, value, Core_1.incrementNumber, undefined);
+    return Core_1.modifyImmutableInternal(root, root, path, value, Core_1.incrementNumber, undefined);
 }
 exports.incrementImmutable = incrementImmutable;
 function arrayConcatImmutable(root, path, values) {
-    return Core_1.modifyImmutableInternal(root, path, values, Core_1.arrayJoin, false);
+    return Core_1.modifyImmutableInternal(root, root, path, values, Core_1.arrayJoin, false);
 }
 exports.arrayConcatImmutable = arrayConcatImmutable;
 function arrayPushImmutable(root, path, ...values) {
-    return Core_1.modifyImmutableInternal(root, path, values, Core_1.arrayJoin, false);
+    return Core_1.modifyImmutableInternal(root, root, path, values, Core_1.arrayJoin, false);
 }
 exports.arrayPushImmutable = arrayPushImmutable;
 function arrayPopImmutable(root, path) {
-    return Core_1.modifyImmutableInternal(root, path, null, Core_1.arraySlice, { start: 0, end: -1 });
+    return Core_1.modifyImmutableInternal(root, root, path, null, Core_1.arraySlice, { start: 0, end: -1 });
 }
 exports.arrayPopImmutable = arrayPopImmutable;
 function arrayShiftImmutable(root, path) {
-    return Core_1.modifyImmutableInternal(root, path, null, Core_1.arraySlice, { start: 1, end: undefined });
+    return Core_1.modifyImmutableInternal(root, root, path, null, Core_1.arraySlice, { start: 1, end: undefined });
 }
 exports.arrayShiftImmutable = arrayShiftImmutable;
 function arrayUnshiftImmutable(root, path, ...values) {
-    return Core_1.modifyImmutableInternal(root, path, values, Core_1.arrayJoin, true);
+    return Core_1.modifyImmutableInternal(root, root, path, values, Core_1.arrayJoin, true);
 }
 exports.arrayUnshiftImmutable = arrayUnshiftImmutable;
 function arraySliceImmutable(root, path, start, end) {
-    return Core_1.modifyImmutableInternal(root, path, null, Core_1.arraySlice, { start, end });
+    return Core_1.modifyImmutableInternal(root, root, path, null, Core_1.arraySlice, { start, end });
 }
 exports.arraySliceImmutable = arraySliceImmutable;
 function arraySpliceImmutable(root, path, index, deleteCount, ...values) {
-    return Core_1.modifyImmutableInternal(root, path, values, Core_1.arraySplice, { index, deleteCount });
+    return Core_1.modifyImmutableInternal(root, root, path, values, Core_1.arraySplice, { index, deleteCount });
 }
 exports.arraySpliceImmutable = arraySpliceImmutable;
 function filterImmutable(val, filter) {
@@ -204,3 +205,7 @@ function diffImmutableRecur(o, oOld) {
         return o;
     }
 }
+function modifyMultiImmutable(root, isMutable = false) {
+    return new ModifyContext_1.ModifyContext(root, isMutable);
+}
+exports.modifyMultiImmutable = modifyMultiImmutable;
